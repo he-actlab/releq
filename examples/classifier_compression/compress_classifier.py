@@ -307,7 +307,13 @@ def main():
         torch.cuda.set_device(args.gpus[0])
 
     # Infer the dataset from the model name
-    args.dataset = 'cifar10' if 'cifar' in args.arch else 'imagenet'
+    if 'cifar' in args.arch:
+        args.dataset = 'cifar10'
+    elif 'mnist' in args.arch:
+        args.dataset = 'mnist'
+    else:
+        args.dataset = 'imagenet'
+
     args.num_classes = 10 if args.dataset == 'cifar10' else 1000
 
     if args.earlyexit_thresholds:
