@@ -103,6 +103,8 @@ parser.add_argument('-j', '--workers', default=4, type=int, metavar='N',
                     help='number of data loading workers (default: 4)')
 parser.add_argument('--epochs', default=90, type=int, metavar='N',
                     help='number of total epochs to run')
+parser.add_argument('--partial_epoch', default=1.0, type=float, metavar='N',
+                    help='number of partial epochs to run')
 parser.add_argument('-b', '--batch-size', default=256, type=int,
                     metavar='N', help='mini-batch size (default: 256)')
 parser.add_argument('--lr', '--learning-rate', default=0.1, type=float,
@@ -397,6 +399,9 @@ def main():
                                                 collector=collectors["sparsity"])
             save_collectors_data(collectors, msglogger.logdir)
 
+        f= open("val_accuracy.txt","w+")
+        f.write(str(top5))
+        f.close()
         stats = ('Peformance/Validation/',
                  OrderedDict([('Loss', vloss),
                               ('Top1', top1),
@@ -421,7 +426,7 @@ def main():
                                  best_epochs[-1].top1, is_best, args.name, msglogger.logdir)
 
     # Finally run results on the test set
-    test(test_loader, model, criterion, [pylogger], activations_collectors, args=args)
+    #test(test_loader, model, criterion, [pylogger], activations_collectors, args=args)
 
 
 OVERALL_LOSS_KEY = 'Overall Loss'
@@ -449,6 +454,8 @@ def train(train_loader, model, criterion, optimizer, epoch,
     batch_size = train_loader.batch_size
     steps_per_epoch = math.ceil(total_samples / batch_size)
     msglogger.info('Training epoch: %d samples (%d per mini-batch)', total_samples, batch_size)
+    epoch_frac = args.partial_epoch
+    steps_per_frac_epoch = math.ceil((total_samples*epoch_frac) / batch_size)
 
     # Switch to train mode
     model.train()
@@ -458,6 +465,9 @@ def train(train_loader, model, criterion, optimizer, epoch,
         # Measure data loading time
         data_time.add(time.time() - end)
         inputs, target = inputs.to('cuda'), target.to('cuda')
+
+        if train_step == steps_per_frac_epoch:
+            break
 
         # Execute the forward phase, compute the output and measure loss
         if compression_scheduler:
@@ -522,11 +532,13 @@ def train(train_loader, model, criterion, optimizer, epoch,
             stats = ('Peformance/Training/', stats_dict)
 
             params = model.named_parameters() if args.log_params_histograms else None
+            '''
             distiller.log_training_progress(stats,
                                             params,
                                             epoch, steps_completed,
                                             steps_per_epoch, args.print_freq,
                                             loggers)
+            '''
         end = time.time()
 
 
