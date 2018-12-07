@@ -634,8 +634,8 @@ layer_info = StringIO("""layer_idx_norm;n;c;k;std
 1;6;3;5;0.23009
 2;16;6;5;0.11020
 3;120;400;0;0.04013
-4;0.165580;0.486631;0.0;0.06537
-5;0.082138;0.000000;0.0;0.14734""")
+4;84;120;0;0.06537
+5;10;84;0;0.14734""")
 layer_state_info = pandas.read_csv(layer_info, sep=";")
 min_n = min(layer_state_info.loc[:, 'n'])
 max_n = max(layer_state_info.loc[:, 'n'])
