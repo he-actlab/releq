@@ -1,0 +1,36 @@
+lr_schedulers:
+  training_lr:
+    class: MultiStepLR
+    gamma: 0.2
+    milestones:
+    - 60
+    - 75
+policies:
+- ending_epoch: 200
+  frequency: 1
+  quantizer:
+    instance_name: wrpn_quantizer
+  starting_epoch: 0
+- ending_epoch: 200
+  frequency: 1
+  lr_scheduler:
+    instance_name: training_lr
+  starting_epoch: 0
+quantizers:
+  wrpn_quantizer:
+    bits_activations: null
+    bits_overrides:
+      conv1:
+        acts: null
+        wts: 4
+      conv2:
+        acts: null
+        wts: 5
+      fc1:
+        acts: null
+        wts: 8
+      fc2:
+        acts: null
+        wts: 6
+    bits_weights: 8
+    class: WRPNQuantizer
