@@ -118,6 +118,8 @@ def mnist_load_data(data_dir, batch_size, num_workers, valid_size=0.1, determini
     return train_loader, valid_loader or test_loader, test_loader, input_shape
 
 def svhn_transform(target):
+    print(target)
+    exit(1)
     return int(target) - 1
 
 def svhn_load_data(data_dir, batch_size, num_workers, valid_size=0.1, deterministic=False):
@@ -128,8 +130,8 @@ def svhn_load_data(data_dir, batch_size, num_workers, valid_size=0.1, determinis
                                transforms.ToTensor(),
                                transforms.Normalize(
                                  (0.5, 0.5, 0,5), (0.5, 0.5, 0.5))
-                             ]),
-                             target_transform=svhn_transform,
+                             ])
+                             # target_transform=svhn_transform,
                              )
     num_train = len(train_dataset)
     indices = list(range(num_train))
@@ -161,8 +163,8 @@ def svhn_load_data(data_dir, batch_size, num_workers, valid_size=0.1, determinis
                                transforms.ToTensor(),
                                transforms.Normalize(
                                  (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-                             ]),
-                             target_transform=svhn_transform)
+                             ]))
+                             # target_transform=svhn_transform)
 
     test_loader = torch.utils.data.DataLoader(
             testset, batch_size=batch_size, shuffle=False,

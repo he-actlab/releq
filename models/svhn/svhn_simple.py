@@ -1,7 +1,7 @@
 import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
-
+from collections import OrderedDict
 
 __all__ = ['svhn']
 
@@ -15,10 +15,12 @@ class SVHN(nn.Module):
         super(SVHN, self).__init__()
 	    #
         self.features = features
-        self.classifier = nn.Linear(256, num_classes)
+        self.classifier = nn.Sequential(nn.Linear(256, num_classes))
         #
     def forward(self, x):
         x = self.features(x)
+        # size(0) is batch size
+        # size(1) is image size
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
