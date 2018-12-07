@@ -65,12 +65,12 @@
           
             <li class="toctree-l1">
 		
-    <a class="" href="../schedule/index.html">Compression scheduling</a>
+    <a class="" href="../schedule/index.html">Compression Scheduling</a>
 	    </li>
           
             <li class="toctree-l1">
 		
-    <span class="caption-text">Compressing models</span>
+    <span class="caption-text">Compressing Models</span>
     <ul class="subnav">
                 <li class="">
                     
@@ -121,7 +121,7 @@
           
             <li class="toctree-l1">
 		
-    <a class="" href="../jupyter/index.html">Jupyter notebooks</a>
+    <a class="" href="../jupyter/index.html">Jupyter Notebooks</a>
 	    </li>
           
             <li class="toctree-l1 current">
@@ -140,6 +140,21 @@
         </ul>
     
 
+    </ul>
+	    </li>
+          
+            <li class="toctree-l1">
+		
+    <span class="caption-text">Tutorials</span>
+    <ul class="subnav">
+                <li class="">
+                    
+    <a class="" href="../tutorial-struct_pruning/index.html">Pruning Filters and Channels</a>
+                </li>
+                <li class="">
+                    
+    <a class="" href="../tutorial-lang_model/index.html">Pruning a Language Model</a>
+                </li>
     </ul>
 	    </li>
           
@@ -242,11 +257,11 @@ To execute the model transformation, call the <code>prepare_model</code> functio
 </ul>
 <h3 id="weights-quantization">Weights Quantization</h3>
 <p>The <code>Quantizer</code> class also provides an API to quantize the weights of all layers at once. To use it, the <code>param_quantization_fn</code> attribute needs to point to a function that accepts a tensor and the number of bits. During model transformation, the <code>Quantizer</code> class will build a list of all model parameters that need to be quantized along with their bit-width. Then, the <code>quantize_params</code> function can be called, which will iterate over all parameters and quantize them using <code>params_quantization_fn</code>.</p>
-<h3 id="training-with-quantization">Training with Quantization</h3>
-<p>The <code>Quantizer</code> class supports training with quantization in the loop. This requires handling of a couple of flows / scenarios:</p>
+<h3 id="quantization-aware-training">Quantization-Aware Training</h3>
+<p>The <code>Quantizer</code> class supports quantization-aware training, that is - training with quantization in the loop. This requires handling of a couple of flows / scenarios:</p>
 <ol>
 <li>
-<p>Maintaining a full precision copy of the weights, as described <a href="../quantization/index.html#training-with-quantization">here</a>. This is enabled by setting <code>train_with_fp_copy=True</code> in the <code>Quantizer</code> constructor. At model transformation, in each module that has parameters that should be quantized, a new <code>torch.nn.Parameter</code> is added, which will maintain the required full precision copy of the parameters. Note that this is done in-place - a new module <strong>is not</strong> created. We preferred not to sub-class the existing PyTorch modules for this purpose. In order to this in-place, and also guarantee proper back-propagation through the weights quantization function, we employ the following "hack": </p>
+<p>Maintaining a full precision copy of the weights, as described <a href="../quantization/index.html#quantization-aware-training">here</a>. This is enabled by setting <code>train_with_fp_copy=True</code> in the <code>Quantizer</code> constructor. At model transformation, in each module that has parameters that should be quantized, a new <code>torch.nn.Parameter</code> is added, which will maintain the required full precision copy of the parameters. Note that this is done in-place - a new module <strong>is not</strong> created. We preferred not to sub-class the existing PyTorch modules for this purpose. In order to this in-place, and also guarantee proper back-propagation through the weights quantization function, we employ the following "hack": </p>
 <ol>
 <li>The existing <code>torch.nn.Parameter</code>, e.g. <code>weights</code>, is replaced by a <code>torch.nn.Parameter</code> named <code>float_weight</code>.</li>
 <li>To maintain the existing functionality of the module, we then register a <code>buffer</code> in the module with the original name - <code>weights</code>.</li>
@@ -273,8 +288,10 @@ In <code>distiller/quantization/clipped_linear.py</code> there are examples of l
   
     <div class="rst-footer-buttons" role="navigation" aria-label="footer navigation">
       
+        <a href="../tutorial-struct_pruning/index.html" class="btn btn-neutral float-right" title="Pruning Filters and Channels">Next <span class="icon icon-circle-arrow-right"></span></a>
       
-        <a href="../jupyter/index.html" class="btn btn-neutral" title="Jupyter notebooks"><span class="icon icon-circle-arrow-left"></span> Previous</a>
+      
+        <a href="../jupyter/index.html" class="btn btn-neutral" title="Jupyter Notebooks"><span class="icon icon-circle-arrow-left"></span> Previous</a>
       
     </div>
   
@@ -302,6 +319,8 @@ In <code>distiller/quantization/clipped_linear.py</code> there are examples of l
       
         <span><a href="../jupyter/index.html" style="color: #fcfcfc;">&laquo; Previous</a></span>
       
+      
+        <span style="margin-left: 15px"><a href="../tutorial-struct_pruning/index.html" style="color: #fcfcfc">Next &raquo;</a></span>
       
     </span>
 </div>
