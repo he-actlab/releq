@@ -26,7 +26,7 @@ import torchvision.datasets as datasets
 from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 
-DATASETS_NAMES = ['imagenet', 'cifar10', 'mnist']
+DATASETS_NAMES = ['imagenet', 'cifar10', 'mnist', 'svhn']
 
 
 def load_data(dataset, data_dir, batch_size, workers, valid_size=0.1, deterministic=False):
@@ -48,6 +48,8 @@ def load_data(dataset, data_dir, batch_size, workers, valid_size=0.1, determinis
         return imagenet_load_data(data_dir, batch_size, workers, valid_size=valid_size, deterministic=deterministic)
     if dataset == 'mnist':
         return mnist_load_data(data_dir, batch_size, workers, valid_size=valid_size, deterministic=deterministic)
+    if dataset == 'svhn':
+        return svhn_load_data(data_dir, batch_size, workers, valid_size=valid_size, deterministic=deterministic)
     print("FATAL ERROR: load_data does not support dataset %s" % dataset)
     exit(1)
 

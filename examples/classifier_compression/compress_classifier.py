@@ -311,10 +311,12 @@ def main():
         args.dataset = 'cifar10'
     elif 'mnist' in args.arch:
         args.dataset = 'mnist'
+    elif 'svhn' in args.arch:
+        args.dataset = 'svhn'
     else:
         args.dataset = 'imagenet'
 
-    args.num_classes = 10 if args.dataset == 'cifar10' else 1000
+    args.num_classes = 10 if args.dataset == 'cifar10' or args.dataset == 'svhn' else 1000
 
     if args.earlyexit_thresholds:
         args.num_exits = len(args.earlyexit_thresholds) + 1
