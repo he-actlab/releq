@@ -556,13 +556,11 @@ def train(train_loader, model, criterion, optimizer, epoch,
             stats = ('Peformance/Training/', stats_dict)
 
             params = model.named_parameters() if args.log_params_histograms else None
-            '''
             distiller.log_training_progress(stats,
                                             params,
                                             epoch, steps_completed,
                                             steps_per_epoch, args.print_freq,
                                             loggers)
-            '''
         end = time.time()
 
 
