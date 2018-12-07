@@ -117,26 +117,26 @@ def mnist_load_data(data_dir, batch_size, num_workers, valid_size=0.1, determini
     # If validation split was 0 we use the test set as the validation set
     return train_loader, valid_loader or test_loader, test_loader, input_shape
 
+def svhn_transform(target):
+    return int(target) - 1
+
 def svhn_load_data(data_dir, batch_size, num_workers, valid_size=0.1, deterministic=False):
-    def target_transform(target):
-        return int(target[0]) - 1
-        
-    train_dataset = datasets.SVHN(root=data_dir, train=True,
+    #    
+    train_dataset = datasets.SVHN(root=data_dir, split='train',
                                      download=True,
                              transform=transforms.Compose([
                                transforms.ToTensor(),
                                transforms.Normalize(
                                  (0.5, 0.5, 0,5), (0.5, 0.5, 0.5))
                              ]),
-                             target_transofrm=target_transofrm,
+                             target_transform=svhn_transform,
                              )
-
     num_train = len(train_dataset)
     indices = list(range(num_train))
     split = int(np.floor(valid_size * num_train))
-
+    #
     np.random.shuffle(indices)
-
+    #
     train_idx, valid_idx = indices[split:], indices[:split]
     train_sampler = SubsetRandomSampler(train_idx)
 
@@ -155,14 +155,14 @@ def svhn_load_data(data_dir, batch_size, num_workers, valid_size=0.1, determinis
                                                    num_workers=num_workers, pin_memory=True,
                                                    worker_init_fn=worker_init_fn)
 
-    testset = datasets.SVHN(root=data_dir, train=False,
+    testset = datasets.SVHN(root=data_dir, split='test',
                                      download=True,
                              transform=transforms.Compose([
                                transforms.ToTensor(),
                                transforms.Normalize(
                                  (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
                              ]),
-                             target_transofrm=target_transofrm)
+                             target_transform=svhn_transform)
 
     test_loader = torch.utils.data.DataLoader(
             testset, batch_size=batch_size, shuffle=False,

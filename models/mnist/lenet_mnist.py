@@ -20,7 +20,7 @@ import torch.nn.functional as F
 __all__ = ['lenet_mnist']
 
 class Lenet(nn.Module):
-   def __init__(self):
+    def __init__(self):
         super(Lenet, self).__init__()
         self.conv1 = nn.Conv2d(1, 20, 5)
         self.pool = nn.MaxPool2d(2, 2)

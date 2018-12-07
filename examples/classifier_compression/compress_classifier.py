@@ -494,16 +494,15 @@ def train(train_loader, model, criterion, optimizer, epoch,
 
         if train_step == steps_per_frac_epoch:
             break
-
         # Execute the forward phase, compute the output and measure loss
         if compression_scheduler:
             compression_scheduler.on_minibatch_begin(epoch, train_step, steps_per_epoch, optimizer)
 
         if args.kd_policy is None:
+            # Amir: Running
             output = model(inputs)
         else:
             output = args.kd_policy.forward(inputs)
-
         if not args.earlyexit_lossweights:
             loss = criterion(output, target)
             # Measure accuracy and record loss
@@ -511,7 +510,6 @@ def train(train_loader, model, criterion, optimizer, epoch,
         else:
             # Measure accuracy and record loss
             loss = earlyexit_loss(output, target, criterion, args)
-
         losses[OBJECTIVE_LOSS_KEY].add(loss.item())
 
         if compression_scheduler:

@@ -2,4 +2,4 @@
 
 """This package contains SVHN """
 
-from .svhn import *
+from .svhn_simple import *
