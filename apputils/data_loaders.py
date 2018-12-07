@@ -65,12 +65,12 @@ def __deterministic_worker_init_fn(worker_id, seed=0):
     torch.manual_seed(seed)
 
 
-def mnist_load_datyya(data_dir, batch_size, num_workers, valid_size=0.1, deterministic=False):
-    train_dataset = torchvision.datasets.MNIST(root=data_dir, train=True,
+def mnist_load_data(data_dir, batch_size, num_workers, valid_size=0.1, deterministic=False):
+    train_dataset = datasets.MNIST(root=data_dir, train=True,
                                      download=True,
-                             transform=torchvision.transforms.Compose([
-                               torchvision.transforms.ToTensor(),
-                               torchvision.transforms.Normalize(
+                             transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize(
                                  (0.1307,), (0.3081,))
                              ]))
 
@@ -98,11 +98,11 @@ def mnist_load_datyya(data_dir, batch_size, num_workers, valid_size=0.1, determi
                                                    num_workers=num_workers, pin_memory=True,
                                                    worker_init_fn=worker_init_fn)
 
-    testset = torchvision.datasets.MNIST(root=data_dir, train=False,
+    testset = datasets.MNIST(root=data_dir, train=False,
                                      download=True,
-                             transform=torchvision.transforms.Compose([
-                               torchvision.transforms.ToTensor(),
-                               torchvision.transforms.Normalize(
+                             transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize(
                                  (0.1307,), (0.3081,))
                              ]))
 
