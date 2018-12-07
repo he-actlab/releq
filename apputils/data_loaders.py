@@ -116,6 +116,62 @@ def mnist_load_data(data_dir, batch_size, num_workers, valid_size=0.1, determini
 
     # If validation split was 0 we use the test set as the validation set
     return train_loader, valid_loader or test_loader, test_loader, input_shape
+
+def svhn_load_data(data_dir, batch_size, num_workers, valid_size=0.1, deterministic=False):
+    def target_transform(target):
+        return int(target[0]) - 1
+        
+    train_dataset = datasets.SVHN(root=data_dir, train=True,
+                                     download=True,
+                             transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize(
+                                 (0.5, 0.5, 0,5), (0.5, 0.5, 0.5))
+                             ]),
+                             target_transofrm=target_transofrm,
+                             )
+
+    num_train = len(train_dataset)
+    indices = list(range(num_train))
+    split = int(np.floor(valid_size * num_train))
+
+    np.random.shuffle(indices)
+
+    train_idx, valid_idx = indices[split:], indices[:split]
+    train_sampler = SubsetRandomSampler(train_idx)
+
+    worker_init_fn = __deterministic_worker_init_fn if deterministic else None
+
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=batch_size, sampler=train_sampler,
+                                               num_workers=num_workers, pin_memory=True,
+                                               worker_init_fn=worker_init_fn)
+
+    valid_loader = None
+    if split > 0:
+        valid_sampler = SubsetRandomSampler(valid_idx)
+        valid_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=batch_size, sampler=valid_sampler,
+                                                   num_workers=num_workers, pin_memory=True,
+                                                   worker_init_fn=worker_init_fn)
+
+    testset = datasets.SVHN(root=data_dir, train=False,
+                                     download=True,
+                             transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize(
+                                 (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                             ]),
+                             target_transofrm=target_transofrm)
+
+    test_loader = torch.utils.data.DataLoader(
+            testset, batch_size=batch_size, shuffle=False,
+            num_workers=num_workers, pin_memory=True)
+
+    input_shape = __image_size(train_dataset)
+
+    # If validation split was 0 we use the test set as the validation set
+    return train_loader, valid_loader or test_loader, test_loader, input_shape
 	
 def cifar10_load_data(data_dir, batch_size, num_workers, valid_size=0.1, deterministic=False):
     """Load the CIFAR10 dataset.
