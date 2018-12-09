@@ -21,6 +21,7 @@ import torchvision.models as torch_models
 import models.cifar10 as cifar10_models
 import models.mnist as mnist_models
 import models.imagenet as imagenet_extra_models
+import models.svhn as svhn_models
 
 import logging
 msglogger = logging.getLogger()
@@ -42,7 +43,9 @@ CIFAR10_MODEL_NAMES = sorted(name for name in cifar10_models.__dict__
 MNIST_MODEL_NAMES = sorted(name for name in mnist_models.__dict__
                                    if name.islower() and not name.startswith("__")
                                    and callable(mnist_models.__dict__[name]))
-
+# Amir
+SVHN_MODEL_NAMES = sorted(name for name in svhn_models.__dict__ if name.islower() and not name.startswith("__") and callable(svhn_models.__dict__[name]))
+# Rima
 cifar10_model_names = sorted(name for name in cifar10_models.__dict__
                              if name.islower() and not name.startswith("__")
                              and callable(cifar10_models.__dict__[name]))
@@ -50,8 +53,12 @@ cifar10_model_names = sorted(name for name in cifar10_models.__dict__
 mnist_model_names = sorted(name for name in mnist_models.__dict__
                              if name.islower() and not name.startswith("__")
                              and callable(mnist_models.__dict__[name]))
+# Amir
+svhn_model_names = sorted(name for name in svhn_models.__dict__ if name.islower() and not name.startswith("__") and callable(svhn_models.__dict__[name]))
+# Rima
 
-ALL_MODEL_NAMES = sorted(set(IMAGENET_MODEL_NAMES + CIFAR10_MODEL_NAMES + MNIST_MODEL_NAMES))
+
+ALL_MODEL_NAMES = sorted(set(IMAGENET_MODEL_NAMES + CIFAR10_MODEL_NAMES + MNIST_MODEL_NAMES + SVHN_MODEL_NAMES))
 
 
 def create_model(pretrained, dataset, arch, parallel=True, device_ids=None):
@@ -89,10 +96,14 @@ def create_model(pretrained, dataset, arch, parallel=True, device_ids=None):
         assert arch in mnist_models.__dict__, "Model %s is not supported for dataset MNIST" % arch
         assert not pretrained, "Model %s (MNIST) does not have a pretrained model" % arch
         model = mnist_models.__dict__[arch]()
+    elif dataset == 'svhn':
+        msglogger.info("=> creating %s model for svhn" % arch)
+        assert arch in svhn_models.__dict__, "Model %s is not supported for dataset SVHN" % arch
+        assert not pretrained, "Model %s (SVHN) does not have a pretrained model" % arch
+        model = svhn_models.__dict__[arch]()
     else:
         print("FATAL ERROR: create_model does not support models for dataset %s" % dataset)
         exit()
-
     if (arch.startswith('alexnet') or arch.startswith('vgg')) and parallel:
         model.features = torch.nn.DataParallel(model.features, device_ids=device_ids)
     elif parallel:

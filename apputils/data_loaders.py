@@ -26,7 +26,7 @@ import torchvision.datasets as datasets
 from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 
-DATASETS_NAMES = ['imagenet', 'cifar10', 'mnist']
+DATASETS_NAMES = ['imagenet', 'cifar10', 'mnist', 'svhn']
 
 
 def load_data(dataset, data_dir, batch_size, workers, valid_size=0.1, deterministic=False):
@@ -48,6 +48,8 @@ def load_data(dataset, data_dir, batch_size, workers, valid_size=0.1, determinis
         return imagenet_load_data(data_dir, batch_size, workers, valid_size=valid_size, deterministic=deterministic)
     if dataset == 'mnist':
         return mnist_load_data(data_dir, batch_size, workers, valid_size=valid_size, deterministic=deterministic)
+    if dataset == 'svhn':
+        return svhn_load_data(data_dir, batch_size, workers, valid_size=valid_size, deterministic=deterministic)
     print("FATAL ERROR: load_data does not support dataset %s" % dataset)
     exit(1)
 
@@ -105,6 +107,64 @@ def mnist_load_data(data_dir, batch_size, num_workers, valid_size=0.1, determini
                                transforms.Normalize(
                                  (0.1307,), (0.3081,))
                              ]))
+
+    test_loader = torch.utils.data.DataLoader(
+            testset, batch_size=batch_size, shuffle=False,
+            num_workers=num_workers, pin_memory=True)
+
+    input_shape = __image_size(train_dataset)
+
+    # If validation split was 0 we use the test set as the validation set
+    return train_loader, valid_loader or test_loader, test_loader, input_shape
+
+def svhn_transform(target):
+    print(target)
+    exit(1)
+    return int(target) - 1
+
+def svhn_load_data(data_dir, batch_size, num_workers, valid_size=0.1, deterministic=False):
+    #    
+    train_dataset = datasets.SVHN(root=data_dir, split='train',
+                                     download=True,
+                             transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize(
+                                 (0.5, 0.5, 0,5), (0.5, 0.5, 0.5))
+                             ])
+                             # target_transform=svhn_transform,
+                             )
+    num_train = len(train_dataset)
+    indices = list(range(num_train))
+    split = int(np.floor(valid_size * num_train))
+    #
+    np.random.shuffle(indices)
+    #
+    train_idx, valid_idx = indices[split:], indices[:split]
+    train_sampler = SubsetRandomSampler(train_idx)
+
+    worker_init_fn = __deterministic_worker_init_fn if deterministic else None
+
+    train_loader = torch.utils.data.DataLoader(train_dataset,
+                                               batch_size=batch_size, sampler=train_sampler,
+                                               num_workers=num_workers, pin_memory=True,
+                                               worker_init_fn=worker_init_fn)
+
+    valid_loader = None
+    if split > 0:
+        valid_sampler = SubsetRandomSampler(valid_idx)
+        valid_loader = torch.utils.data.DataLoader(train_dataset,
+                                                   batch_size=batch_size, sampler=valid_sampler,
+                                                   num_workers=num_workers, pin_memory=True,
+                                                   worker_init_fn=worker_init_fn)
+
+    testset = datasets.SVHN(root=data_dir, split='test',
+                                     download=True,
+                             transform=transforms.Compose([
+                               transforms.ToTensor(),
+                               transforms.Normalize(
+                                 (0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
+                             ]))
+                             # target_transform=svhn_transform)
 
     test_loader = torch.utils.data.DataLoader(
             testset, batch_size=batch_size, shuffle=False,
