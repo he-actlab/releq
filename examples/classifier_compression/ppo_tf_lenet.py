@@ -286,7 +286,7 @@ class RLQuantization:
         self.total_episodes		= num_episodes  # total number of observations used for training (in order)
         self.network_name 	= network_name  # defines the network name
 
-        self.supported_bit_widths = [3, 4, 5, 6, 8] #[2, 3, 4, 5, 8]
+        self.supported_bit_widths = [2, 3, 4, 5, 6] #[2, 3, 4, 5, 8]
         self.max_bitwidth = max(self.supported_bit_widths)
 
         """ Clear the TensorFlow graph """
@@ -402,19 +402,27 @@ class RLQuantization:
             new_bitwidth = self.perform_flexible_action(act_index)
             s[1] = new_bitwidth
 
-            #Calculate Reward
+            # Bitwidth 
             new_bitwidth_layers = deepcopy(bitwidth_layers)
             new_bitwidth_layers[layer_num] = new_bitwidth
             print("Bitwidth layers ", new_bitwidth_layers)
             self.update_yaml_file(new_bitwidth_layers)
-            os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --resume ./lenet_mnist.pth.tar")
+            
+            # Accuracy -> distiller 
+            os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar")
             cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
             #cur_accuracy = self.nn_inference_func(self.network_name, new_bitwidth_layers) #self.nn_inference_func(self.network_name, episode_num, layer_num, new_bitwidth_layers)
+            
             self.quant_reward_const = 1*cur_accuracy/self.fp_accuracy
-            reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
+            
+            # update accuracy state 
+            self.update_quant_state(new_bitwidth_layers)
+
+            #reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
+            reward = self.calculate_reward_shaping(cur_accuracy)
+            
             s[3] = cur_accuracy/self.fp_accuracy # ACC state
             # AHMED: debug
-            self.update_quant_state(bitwidth_layers)
             #data = [episode_num, layer_num, self.quant_state, s[3], reward]
             #data = [episode_num, layer_num, self.quant_state, s[3], reward, bitwidth_layers[0],bitwidth_layers[1],bitwidth_layers[2],bitwidth_layers[3],bitwidth_layers[4],bitwidth_layers[5],bitwidth_layers[6],bitwidth_layers[7]]
             data = [episode_num, layer_num, self.quant_state, s[3], reward]
@@ -494,7 +502,21 @@ class RLQuantization:
 
         with open(self.yaml_file, "w") as f:
             yaml.dump(self.yaml_out, f, default_flow_style=False)
+   
+    def calculate_reward_shaping(self, cur_accuracy):
+        margin = 0.6
+        x = self.quant_state
+        acc_state = cur_accuracy/self.fp_accuracy # ACC state 
+        y = acc_state
+        reward = 1 - x**0.4
+        if (y < margin):
+            reward = -1
+        else:
+            acc_discount = (max(y, margin))**(0.5/max(y, margin))
+            reward = reward * acc_discount
+        return reward 
     
+ 
     def calculate_reward(self, cur_accuracy, prev_accuracy, cur_bitwidth, new_bitwidth):
         print("Acc Diff", cur_accuracy - prev_accuracy)
         acc_reward = (cur_accuracy - prev_accuracy)*self.acc_reward_const
@@ -513,7 +535,7 @@ class RLQuantization:
         #cur_bitwidth = new_bitwidth
         #quant_reward = (cur_bitwidth - prev_bitwidth)*self.quant_reward_const
         total_reward = acc_reward+quant_reward
-        total_reward /= 200
+        total_reward /= 400
         print(bcolors.OKGREEN + "# total_reward %f , # quant_reward %f , acc_reward %f " % (total_reward, quant_reward, acc_reward) + bcolors.ENDC)
         return total_reward
     '''
