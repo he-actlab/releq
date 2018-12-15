@@ -659,7 +659,7 @@ class RLQuantization:
         '''
 
 def write_to_csv(step_data):
-    with open('rl_board_history.csv', 'a') as csvFile:
+    with open('releq_svhn_learning_history_log.csv', 'a') as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(step_data)
 # initializing acc_cache dict to use it as global var.
@@ -668,7 +668,7 @@ headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward',
                         'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits', 'l5-bits', 'l6-bits', 'l7-bits', 'l8-bits', 
                         'prob_2bits','prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_8bits']
 
-with open('rl_board_history.csv', 'w') as writeFile:
+with open('releq_svhn_learning_history_log.csv', 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerow(headers)
 

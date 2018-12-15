@@ -1,0 +1,11 @@
+# releq configuration file
+network_name: 'lenet'
+num_episodes: 1000
+PPO_params:
+  gamma: 0.900
+  lambda: 0.9
+releq_reward_params:
+  a: 0.4
+  b: 0.5
+  th: 0.8
+supported_bitwidths: [2, 3, 4, 5, 8]
