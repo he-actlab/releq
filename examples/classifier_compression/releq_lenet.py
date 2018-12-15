@@ -350,6 +350,7 @@ class RLQuantization:
             
     
     def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy):
+        global acc_cache
         #Building State
         intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm'], bitwidth_layers[layer_num]/32, quant_state, accuracy/self.fp_accuracy, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
         cur_accuracy = accuracy
@@ -408,12 +409,18 @@ class RLQuantization:
             new_bitwidth_layers[layer_num] = new_bitwidth
             print("Bitwidth layers ", new_bitwidth_layers)
             self.update_yaml_file(new_bitwidth_layers)
+           
+            # acc_bw cache - CHECKING 
+            if str(new_bitwidth_layers) in acc_cache:
+               cur_accuracy = acc_cache[str(new_bitwidth_layers)]
+            else:
+               # Accuracy -> distiller 
+               os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar")
+               cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
             
-            # Accuracy -> distiller 
-            os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar")
-            cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
-            #cur_accuracy = self.nn_inference_func(self.network_name, new_bitwidth_layers) #self.nn_inference_func(self.network_name, episode_num, layer_num, new_bitwidth_layers)
-            
+               # acc-bw caching - CACHE UPDATE  
+               acc_cache[str(new_bitwidth_layers)] = cur_accuracy  
+
             self.quant_reward_const = 1*cur_accuracy/self.fp_accuracy
             
             # update accuracy state 
@@ -547,6 +554,9 @@ def write_to_csv(step_data):
         writer = csv.writer(csvFile)
         writer.writerow(step_data)
 
+# initializing acc_cache dict to use it as global var.
+acc_cache = {}
+
 network_name = "lenet"
 number_of_layers = 4
 layer_info = StringIO("""layer_idx_norm;n;c;k;std
@@ -567,5 +577,9 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2"]
-rl_quant = RLQuantization(number_of_layers, 99.8, 1000, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+rl_quant = RLQuantization(number_of_layers, 99.8, 2, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
 rl_quant.quantize_layers()
+
+#print(acc_cache)
+#print(sys.getsizeof(acc_cache))
+
