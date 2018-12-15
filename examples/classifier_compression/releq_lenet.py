@@ -288,6 +288,7 @@ class RLQuantization:
 
         self.supported_bit_widths = [2, 3, 4, 5, 6] #[2, 3, 4, 5, 8]
         self.max_bitwidth = max(self.supported_bit_widths)
+        self.min_bitwidth = min(self.supported_bit_widths)
 
         """ Clear the TensorFlow graph """
         tf.reset_default_graph() 
@@ -418,7 +419,8 @@ class RLQuantization:
             # update accuracy state 
             self.update_quant_state(new_bitwidth_layers)
 
-            reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
+            reward = self.calculate_reward_shaping(cur_accuracy)
+            #reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
             
             s[3] = cur_accuracy/self.fp_accuracy # ACC state
             # AHMED: debug
@@ -523,113 +525,23 @@ class RLQuantization:
         total_reward /= 400
         print(bcolors.OKGREEN + "# total_reward %f , # quant_reward %f , acc_reward %f " % (total_reward, quant_reward, acc_reward) + bcolors.ENDC)
         return total_reward
-    '''
-    def quantize_layers_together(self):
-        """ delete the training for current network """
-        train_dir = "/backup/amir-tc/rlquant.code/rl-training"
-        network_dirname = train_dir + "/" + self.network_name
-        if os.path.exists(network_dirname):
-            shutil.rmtree(network_dirname)
-        os.makedirs(network_dirname)
 
-        """ Start TensorFlow """
-        init = tf.global_variables_initializer()
-        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.25)
-
-        """ Launch the TensorFlow graph """
-        with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
-            sess.run(init)
-
-            bitwidth_layers = [32 for i in range(self.num_layers)]
-            cur_accuracy = self.fp_accuracy
-
-            for i in range(self.total_episodes):
-                print(bcolors.OKGREEN + "# Running epidode %d..." % (i) + bcolors.ENDC)
-                s_history  = []
-                a_history  = []
-                rewards  = []
-                v_preds = []
-
-                for layer_num in range(self.num_layers):
-                    intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm'], bitwidth_layers[layer_num]/32, quant_state, accuracy/self.fp_accuracy, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
-
-                    s = intial_layer_state
-
-                    writer = tf.summary.FileWriter('./log/train', tf.get_default_session().graph)
-
-                    print(bcolors.OKGREEN + "# Running action for layer %d..." % (layer_num) + bcolors.ENDC)
-                
-                    #act_index: 0-> Dec Bits, 1-> Keep Same, 2->Inc Bits
-                    act_index, v_pred = self.Policy.act(obs=[s], stochastic=True)
-                    print("Action Probabilities ", self.Policy.get_action_prob(obs=[s]), s)
-                    l1w, l2w, l3w = self.Policy.get_policy_weights()
-                    if np.isnan(l1w).any():
-                        print("L1W ", l1w)
-                        exit()
-                    if np.isnan(l2w).any():
-                        print("L2W ", l2w)
-                        exit()
-                    if np.isnan(l3w).any():
-                        print("L3W ", l3w)
-                        exit()
-                    #print("Gradients ", l1w, l2w, l3w)
-                    act_index = np.asscalar(act_index)
-                    v_pred = np.asscalar(v_pred)
-
-                    s_history.append(s)
-                    a_history.append(act_index)
-                    v_preds.append(v_pred)
-
-                    cur_bitwidth = s[1]*32
-                    new_bitwidth = self.perform_action(cur_bitwidth, act_index)
-
-                    #Calculate Reward
-                    bitwidth_layers[layer_num] = new_bitwidth
-                    print("Bitwidth layers ",  bitwidth_layers)
-                    cur_accuracy = self.nn_inference_func(bitwidth_layers)
-                    self.quant_reward_const = cur_accuracy/self.fp_accuracy
-                    reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, cur_bitwidth, new_bitwidth)
-                    s[3] = cur_accuracy/self.fp_accuracy
-                    rewards.append(reward)
-
-                    self.update_quant_state(bitwidth_layers)
-
-                v_preds_next = v_preds[1:] + [0]
-
-                gaes = self.PPO.get_gaes(rewards=rewards, v_preds=v_preds, v_preds_next=v_preds_next)
-
-                # convert list to numpy array for feeding tf.placeholder
-                observations = np.reshape(s_history, newshape=[-1] + list([8]))
-                actions = np.array(a_history).astype(dtype=np.int32)
-                rewards = np.array(rewards).astype(dtype=np.float32)
-                v_preds_next = np.array(v_preds_next).astype(dtype=np.float32)
-                gaes = np.array(gaes).astype(dtype=np.float32)
-                gaes = (gaes - gaes.mean()) / gaes.std()
-                
-                self.PPO.assign_policy_parameters()
-                
-                inp = [observations, actions, rewards, v_preds_next, gaes]
-                
-                # train
-                for epoch in range(1):
-                    sample_indices = np.random.randint(low=0, high=observations.shape[0], size=1)  # indices are in [low, high)
-                    sampled_inp = [np.take(a=a, indices=sample_indices, axis=0) for a in inp]  # sample training data
-                    print(sampled_inp)
-                    self.PPO.train(obs=sampled_inp[0], actions=sampled_inp[1], rewards=sampled_inp[2], v_preds_next=sampled_inp[3], gaes=sampled_inp[4])
-                
-                summary = self.PPO.get_summary(obs=inp[0], actions=inp[1], rewards=inp[2], v_preds_next=inp[3], gaes=inp[4])[0]
-                
-                writer.add_summary(summary, i)
-                writer.close()
-            
-                print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
-                print("Accuracy with new bit_widths is ", cur_accuracy)
-        reward_tot = (acc_reward+quant_reward)/10
-        print(bcolors.OKGREEN + "# quant_reward %f , acc_reward %f " % (quant_reward, acc_reward) + bcolors.ENDC)
-        print('Total Reward = ', reward_tot)
-        return reward_tot
-        '''
-
+    def calculate_reward_shaping(self, cur_accuracy):
+        margin = 0.7
+        a = 0.8
+        b = 1
+        x_min = self.min_bitwidth/self.max_bitwidth
+        x = self.quant_state - x_min 
+        acc_state = cur_accuracy/self.fp_accuracy
+        y = acc_state
+        reward = 1 - x**a
+        if (y < margin):
+            reward = -1
+        else:
+            acc_discount = (max(y, margin))**(b/max(y, margin))
+            reward = 2*(reward * acc_discount - 0.5)
+        return reward 
+    
 def write_to_csv(step_data):
     with open('rl_board_history.csv', 'a') as csvFile:
         writer = csv.writer(csvFile)
