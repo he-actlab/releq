@@ -280,13 +280,19 @@ class PPOTrain:
 
 
 class RLQuantization:
-    def __init__(self, num_layers, accuracy, num_episodes, num_act_episode, network_name, layer_names, layer_state_info):
+    def __init__(self, num_layers, accuracy, network_name, layer_names, layer_state_info):
+        
+        self.yaml_config_file = "releq_config.yaml"
+        with open(self.yaml_config_file) as f:
+            self.yaml_config = yaml.load(f)
+        
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
-        self.n_act_p_episode     = num_act_episode   # number of actions per each episod (fix for now)
-        self.total_episodes        = num_episodes  # total number of observations used for training (in order)
+        self.n_act_p_episode     = 1  # number of actions per each episod (fix for now)
+        #self.total_episodes        = num_episodes  # total number of observations used for training (in order)
+        self.total_episodes = self.yaml_config["num_episodes"]
         self.network_name     = network_name  # defines the network name
 
-        self.supported_bit_widths = [2, 3, 4, 5, 8] #[2, 3, 4, 5, 8]
+        self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] #[2, 3, 4, 5, 8]
         self.max_bitwidth = max(self.supported_bit_widths)
         self.min_bitwidth = min(self.supported_bit_widths)
 
@@ -312,10 +318,11 @@ class RLQuantization:
         self.layer_state_info = layer_state_info
         self.layer_names = layer_names
 
-        #self.yaml_file = "svhn_bn_wrpn.yaml"
+        #self.yaml_file = "cifar_bn_wrpn.yaml.yaml"
         self.yaml_file = "svhn_bn_dorefa.yaml"
         with open(self.yaml_file) as f:
             self.yaml_out = yaml.load(f)
+        
     
     def quantize_layers(self):
         """ delete the training for current network """
@@ -696,7 +703,7 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
-rl_quant = RLQuantization(number_of_layers, 94.5, 1000, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+rl_quant = RLQuantization(number_of_layers, 94.5, network_name, layer_names, layer_state_info) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers()
 
 
