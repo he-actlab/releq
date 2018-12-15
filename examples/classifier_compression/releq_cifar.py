@@ -26,9 +26,9 @@ import numpy as np
 import csv
 
 try:
-	xrange = xrange
+    xrange = xrange
 except:
-	xrange = range
+    xrange = range
 #############################
 
 import logging
@@ -49,7 +49,7 @@ class bcolors:
     UNDERLINE = '\033[4m'
 pass
 
-GAMMA = 0.90
+GAMMA = 0.999
 
 class Policy_net:
     def __init__(self, name: str, temp=0.5, num_actions=3):
@@ -282,11 +282,11 @@ class PPOTrain:
 class RLQuantization:
     def __init__(self, num_layers, accuracy, num_episodes, num_act_episode, network_name, layer_names, layer_state_info):
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
-        self.n_act_p_episode 	= num_act_episode   # number of actions per each episod (fix for now)
-        self.total_episodes		= num_episodes  # total number of observations used for training (in order)
-        self.network_name 	= network_name  # defines the network name
+        self.n_act_p_episode     = num_act_episode   # number of actions per each episod (fix for now)
+        self.total_episodes        = num_episodes  # total number of observations used for training (in order)
+        self.network_name     = network_name  # defines the network name
 
-        self.supported_bit_widths = [2, 3, 4, 5, 6] #[2, 3, 4, 5, 8]
+        self.supported_bit_widths = [2, 3, 4, 5, 8] 
         self.max_bitwidth = max(self.supported_bit_widths)
         self.min_bitwidth = min(self.supported_bit_widths)
 
@@ -312,7 +312,8 @@ class RLQuantization:
         self.layer_state_info = layer_state_info
         self.layer_names = layer_names
 
-        self.yaml_file = "lenet_bn_wrpn.yaml"
+        self.yaml_file = "cifar_bn_dorefa.yaml"
+        #self.yaml_file = "cifar_bn_wrpn.yaml"
         with open(self.yaml_file) as f:
             self.yaml_out = yaml.load(f)
     
@@ -404,30 +405,37 @@ class RLQuantization:
             new_bitwidth = self.perform_flexible_action(act_index)
             s[1] = new_bitwidth
 
-            # Bitwidth 
+            # Calculate Bitwidth 
             new_bitwidth_layers = deepcopy(bitwidth_layers)
             new_bitwidth_layers[layer_num] = new_bitwidth
             print("Bitwidth layers ", new_bitwidth_layers)
             self.update_yaml_file(new_bitwidth_layers)
-           
+
             # acc_bw cache - CHECKING 
             if str(new_bitwidth_layers) in acc_cache:
                cur_accuracy = acc_cache[str(new_bitwidth_layers)]
             else:
-               # Accuracy -> distiller 
-               os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar")
+               # Accruacy -> distiller 
+               os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress ./cifar_bn_dorefa.yaml --epochs 10 --lr 0.01 --resume ./simplenet_cifar.pth.tar")
+               #os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress ./cifar_bn_wrpn.yaml --epochs 10 --lr 0.01 --resume ./simplenet_cifar.pth.tar")
                cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
-            
+               #cur_accuracy = self.nn_inference_func(self.network_name, new_bitwidth_layers) #self.nn_inference_func(self.network_name, episode_num, layer_num, new_bitwidth_layers)
+             
                # acc-bw caching - CACHE UPDATE  
                acc_cache[str(new_bitwidth_layers)] = cur_accuracy  
+                           
 
             self.quant_reward_const = 1*cur_accuracy/self.fp_accuracy
+
             
-            # update accuracy state 
+
+
+            # Update quantization state 
             self.update_quant_state(new_bitwidth_layers)
 
-            reward = self.calculate_reward_shaping(cur_accuracy)
+            # calculate reward 
             #reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
+            reward = self.calculate_reward_shaping(cur_accuracy)
             
             s[3] = cur_accuracy/self.fp_accuracy # ACC state
             # AHMED: debug
@@ -505,12 +513,29 @@ class RLQuantization:
         #    self.yaml_out["quantizers"]["wrpn_quantizer"]["bits_overrides"][element]["wts"] = weight_bitwidth_layers[i]
 
         for i, layer_name in enumerate(self.layer_names):
-            self.yaml_out["quantizers"]["wrpn_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
+            self.yaml_out["quantizers"]["dorefa_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
+            #self.yaml_out["quantizers"]["wrpn_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
 
 
         with open(self.yaml_file, "w") as f:
             yaml.dump(self.yaml_out, f, default_flow_style=False)
-   
+    
+    def calculate_reward_shaping(self, cur_accuracy):
+        margin = 0.7
+        a = 0.8
+        b = 1
+        x_min = self.min_bitwidth/self.max_bitwidth
+        x = self.quant_state - x_min # QUANT state
+        acc_state = cur_accuracy/self.fp_accuracy # ACC state 
+        y = acc_state
+        reward = 1 - x**a
+        if (y < margin):
+            reward = -1
+        else:
+            acc_discount = (max(y, margin))**(b/max(y, margin))
+            reward = 2*(reward * acc_discount - 0.5)
+        return reward 
+    
     def calculate_reward(self, cur_accuracy, prev_accuracy, cur_bitwidth, new_bitwidth):
         print("Acc Diff", cur_accuracy - prev_accuracy)
         acc_reward = (cur_accuracy - prev_accuracy)*self.acc_reward_const
@@ -529,53 +554,139 @@ class RLQuantization:
         #cur_bitwidth = new_bitwidth
         #quant_reward = (cur_bitwidth - prev_bitwidth)*self.quant_reward_const
         total_reward = acc_reward+quant_reward
-        total_reward /= 400
+        total_reward /= 200
         print(bcolors.OKGREEN + "# total_reward %f , # quant_reward %f , acc_reward %f " % (total_reward, quant_reward, acc_reward) + bcolors.ENDC)
         return total_reward
+    '''
+    def quantize_layers_together(self):
+        """ delete the training for current network """
+        train_dir = "/backup/amir-tc/rlquant.code/rl-training"
+        network_dirname = train_dir + "/" + self.network_name
+        if os.path.exists(network_dirname):
+            shutil.rmtree(network_dirname)
+        os.makedirs(network_dirname)
 
-    def calculate_reward_shaping(self, cur_accuracy):
-        margin = 0.7
-        a = 0.8
-        b = 1
-        x_min = self.min_bitwidth/self.max_bitwidth
-        x = self.quant_state - x_min 
-        acc_state = cur_accuracy/self.fp_accuracy
-        y = acc_state
-        reward = 1 - x**a
-        if (y < margin):
-            reward = -1
-        else:
-            acc_discount = (max(y, margin))**(b/max(y, margin))
-            reward = 2*(reward * acc_discount - 0.5)
-        return reward 
-    
+        """ Start TensorFlow """
+        init = tf.global_variables_initializer()
+        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=0.25)
+
+        """ Launch the TensorFlow graph """
+        with tf.Session(config=tf.ConfigProto(gpu_options=gpu_options)) as sess:
+            sess.run(init)
+
+            bitwidth_layers = [32 for i in range(self.num_layers)]
+            cur_accuracy = self.fp_accuracy
+
+            for i in range(self.total_episodes):
+                print(bcolors.OKGREEN + "# Running epidode %d..." % (i) + bcolors.ENDC)
+                s_history  = []
+                a_history  = []
+                rewards  = []
+                v_preds = []
+
+                for layer_num in range(self.num_layers):
+                    intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm'], bitwidth_layers[layer_num]/32, quant_state, accuracy/self.fp_accuracy, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
+
+                    s = intial_layer_state
+
+                    writer = tf.summary.FileWriter('./log/train', tf.get_default_session().graph)
+
+                    print(bcolors.OKGREEN + "# Running action for layer %d..." % (layer_num) + bcolors.ENDC)
+                
+                    #act_index: 0-> Dec Bits, 1-> Keep Same, 2->Inc Bits
+                    act_index, v_pred = self.Policy.act(obs=[s], stochastic=True)
+                    print("Action Probabilities ", self.Policy.get_action_prob(obs=[s]), s)
+                    l1w, l2w, l3w = self.Policy.get_policy_weights()
+                    if np.isnan(l1w).any():
+                        print("L1W ", l1w)
+                        exit()
+                    if np.isnan(l2w).any():
+                        print("L2W ", l2w)
+                        exit()
+                    if np.isnan(l3w).any():
+                        print("L3W ", l3w)
+                        exit()
+                    #print("Gradients ", l1w, l2w, l3w)
+                    act_index = np.asscalar(act_index)
+                    v_pred = np.asscalar(v_pred)
+
+                    s_history.append(s)
+                    a_history.append(act_index)
+                    v_preds.append(v_pred)
+
+                    cur_bitwidth = s[1]*32
+                    new_bitwidth = self.perform_action(cur_bitwidth, act_index)
+
+                    #Calculate Reward
+                    bitwidth_layers[layer_num] = new_bitwidth
+                    print("Bitwidth layers ",  bitwidth_layers)
+                    cur_accuracy = self.nn_inference_func(bitwidth_layers)
+                    self.quant_reward_const = cur_accuracy/self.fp_accuracy
+                    reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, cur_bitwidth, new_bitwidth)
+                    s[3] = cur_accuracy/self.fp_accuracy
+                    rewards.append(reward)
+
+                    self.update_quant_state(bitwidth_layers)
+
+                v_preds_next = v_preds[1:] + [0]
+
+                gaes = self.PPO.get_gaes(rewards=rewards, v_preds=v_preds, v_preds_next=v_preds_next)
+
+                # convert list to numpy array for feeding tf.placeholder
+                observations = np.reshape(s_history, newshape=[-1] + list([8]))
+                actions = np.array(a_history).astype(dtype=np.int32)
+                rewards = np.array(rewards).astype(dtype=np.float32)
+                v_preds_next = np.array(v_preds_next).astype(dtype=np.float32)
+                gaes = np.array(gaes).astype(dtype=np.float32)
+                gaes = (gaes - gaes.mean()) / gaes.std()
+                
+                self.PPO.assign_policy_parameters()
+                
+                inp = [observations, actions, rewards, v_preds_next, gaes]
+                
+                # train
+                for epoch in range(1):
+                    sample_indices = np.random.randint(low=0, high=observations.shape[0], size=1)  # indices are in [low, high)
+                    sampled_inp = [np.take(a=a, indices=sample_indices, axis=0) for a in inp]  # sample training data
+                    print(sampled_inp)
+                    self.PPO.train(obs=sampled_inp[0], actions=sampled_inp[1], rewards=sampled_inp[2], v_preds_next=sampled_inp[3], gaes=sampled_inp[4])
+                
+                summary = self.PPO.get_summary(obs=inp[0], actions=inp[1], rewards=inp[2], v_preds_next=inp[3], gaes=inp[4])[0]
+                
+                writer.add_summary(summary, i)
+                writer.close()
+            
+                print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
+                print("Accuracy with new bit_widths is ", cur_accuracy)
+        reward_tot = (acc_reward+quant_reward)/10
+        print(bcolors.OKGREEN + "# quant_reward %f , acc_reward %f " % (quant_reward, acc_reward) + bcolors.ENDC)
+        print('Total Reward = ', reward_tot)
+        return reward_tot
+        '''
+
 def write_to_csv(step_data):
-    with open('releq_lenet_learning_history_log.csv', 'a') as csvFile:
+    with open('releq_cifar_learning_history_log.csv', 'a') as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(step_data)
 
+# initializing acc_cache dict to use it as global var.
+acc_cache = {}
+headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward',
+                        'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits', 'l5-bits', # CIFAR10
+                        'prob_2bits', 'prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_8bits']
 
-
-headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward', 
-			'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits',  
-			'prob_2bits', 'prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_6bits']
-
-# releq log file initialization (saving learning history)
-with open('releq_lenet_learning_history_log.csv', 'w') as writeFile:
+with open('releq_cifar_learning_history_log.csv', 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerow(headers)
 
-
-# initializing acc_cache dict to use it as global var.
-acc_cache = {}
-
-network_name = "lenet"
-number_of_layers = 4
+network_name = "cifar10"
+number_of_layers = 5 #cifar
 layer_info = StringIO("""layer_idx_norm;n;c;k;std
-1;20;1;5;0.18183
-2;50;20;5;0.03791
-3;500;800;0;0.02124
-4;10;500;0;0.06587""")
+1;6;3;5;0.23009
+2;16;6;5;0.11020
+3;120;400;0;0.04013
+4;84;120;0;0.06537
+5;10;84;0;0.14734""")
 layer_state_info = pandas.read_csv(layer_info, sep=";")
 min_n = min(layer_state_info.loc[:, 'n'])
 max_n = max(layer_state_info.loc[:, 'n'])
@@ -588,10 +699,9 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'c'] = (layer_state_info.loc[layer, 'c'] - min_c)/(max_c - min_c)
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
-layer_names = ["conv1", "conv2", "fc1", "fc2"]
-rl_quant = RLQuantization(number_of_layers, 99.8, 1000, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+layer_names = ["conv1", "conv2", "fc1", "fc2", "fc3"]
+rl_quant = RLQuantization(number_of_layers, 95.6, 1000, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
 rl_quant.quantize_layers()
 
-#print(acc_cache)
 #print(sys.getsizeof(acc_cache))
 
