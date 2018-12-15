@@ -550,9 +550,21 @@ class RLQuantization:
         return reward 
     
 def write_to_csv(step_data):
-    with open('rl_board_history.csv', 'a') as csvFile:
+    with open('releq_lenet_learning_history_log.csv', 'a') as csvFile:
         writer = csv.writer(csvFile)
         writer.writerow(step_data)
+
+
+
+headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward', 
+			'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits',  
+			'prob_2bits', 'prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_6bits']
+
+# releq log file initialization (saving learning history)
+with open('releq_lenet_learning_history_log.csv', 'w') as writeFile:
+    writer = csv.writer(writeFile)
+    writer.writerow(headers)
+
 
 # initializing acc_cache dict to use it as global var.
 acc_cache = {}
