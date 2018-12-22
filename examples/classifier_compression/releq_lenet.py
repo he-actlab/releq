@@ -333,13 +333,19 @@ class RLQuantization:
             sess.run(init)
 
             cur_accuracy = self.fp_accuracy
-            bitwidth_layers = [32 for i in range(self.num_layers)]
+            bitwidth_layers = [2 for i in range(self.num_layers)]
 
             for i in range(self.total_episodes):
                 print(bcolors.OKGREEN + "# Running epidode %d..." % (i) + bcolors.ENDC)
 
+                if (self.total_episodes - i) < 10:
+                    stoch = False
+                    print('taking deterministic actions') 
+                else:
+                    stoch = True 
+
                 for layer in range(self.num_layers): #Not Quantizing the first and last layers
-                    new_bitwidth, cur_accuracy = self.quantize_layer(i, layer, bitwidth_layers, self.quant_state, cur_accuracy)
+                    new_bitwidth, cur_accuracy = self.quantize_layer(i, layer, bitwidth_layers, self.quant_state, cur_accuracy, stoch)
                     bitwidth_layers[layer] = new_bitwidth
                     self.update_quant_state(bitwidth_layers)
                     # here: quant_state
@@ -347,9 +353,9 @@ class RLQuantization:
             
                 print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
                 print("Accuracy with new bit_widths is ", cur_accuracy)
-            
+                return bitwidth_layers, cur_accuracy  
     
-    def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy):
+    def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy, stoch):
         global acc_cache
         #Building State
         intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm'], bitwidth_layers[layer_num]/32, quant_state, accuracy/self.fp_accuracy, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
@@ -373,7 +379,7 @@ class RLQuantization:
             print(bcolors.OKGREEN + "# Running action %d for layer %d..." % (i, layer_num) + bcolors.ENDC)
         
             #act_index: 0-> Dec Bits, 1-> Keep Same, 2->Inc Bits
-            act_index, v_pred, self.Policy.rnn_state_in = self.Policy.act(obs=[s], stochastic=True)
+            act_index, v_pred, self.Policy.rnn_state_in = self.Policy.act(obs=[s], stochastic=stoch)
             #act_index, v_pred = self.Policy.act(obs=[s], stochastic=True)
             print("Action Probabilities ", self.Policy.get_action_prob(obs=[s]))
             #l2w, l3w = self.Policy.get_policy_weights()
@@ -415,7 +421,8 @@ class RLQuantization:
                cur_accuracy = acc_cache[str(new_bitwidth_layers)]
             else:
                # Accuracy -> distiller 
-               os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar")
+               os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist_tf.pth.tar")
+               #os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar")
                cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
             
                # acc-bw caching - CACHE UPDATE  
@@ -534,9 +541,9 @@ class RLQuantization:
         return total_reward
 
     def calculate_reward_shaping(self, cur_accuracy):
-        margin = 0.7
-        a = 0.8
-        b = 1
+        margin = 0.8
+        a = 0.6
+        b = 3
         x_min = self.min_bitwidth/self.max_bitwidth
         x = self.quant_state - x_min 
         acc_state = cur_accuracy/self.fp_accuracy
@@ -589,9 +596,24 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2"]
-rl_quant = RLQuantization(number_of_layers, 99.8, 1000, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
-rl_quant.quantize_layers()
+rl_quant = RLQuantization(number_of_layers, 99.8, 2, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+#rl_quant.quantize_layers()
+RL_bw, acc = rl_quant.quantize_layers()
+""" finetune stage  """
+# start finetuning 
+#os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 20 --lr 0.01 --resume ./lenet_mnist_tf.pth.tar")
+os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_dorefa.yaml --epochs 1 --lr 0.001 --resume lenet_mnist_converted_TF_4.pth.tar")
+# print accruacy after finetuning 
+print("RL bitwidth solution:", RL_bw)
+print("Initial accruacy with limited finetuning:", acc)
+cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
+print("Final accruacy after finetuning:", cur_accuracy)
 
-#print(acc_cache)
-#print(sys.getsizeof(acc_cache))
+
+
+
+
+
+
+
 
