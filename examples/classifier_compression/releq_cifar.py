@@ -286,7 +286,7 @@ class RLQuantization:
         self.total_episodes        = num_episodes  # total number of observations used for training (in order)
         self.network_name     = network_name  # defines the network name
 
-        self.supported_bit_widths = [2, 3, 4, 5, 8] 
+        self.supported_bit_widths = [3, 4, 5, 6, 8] 
         self.max_bitwidth = max(self.supported_bit_widths)
         self.min_bitwidth = min(self.supported_bit_widths)
 
@@ -334,13 +334,19 @@ class RLQuantization:
             sess.run(init)
 
             cur_accuracy = self.fp_accuracy
-            bitwidth_layers = [32 for i in range(self.num_layers)]
+            bitwidth_layers = [8 for i in range(self.num_layers)]
 
             for i in range(self.total_episodes):
                 print(bcolors.OKGREEN + "# Running epidode %d..." % (i) + bcolors.ENDC)
 
+                if (self.total_episodes - i) < 10:
+                    stoch = False
+                    print("taking deterministic actions") 
+                else:
+                    stoch = True 
+
                 for layer in range(self.num_layers): #Not Quantizing the first and last layers
-                    new_bitwidth, cur_accuracy = self.quantize_layer(i, layer, bitwidth_layers, self.quant_state, cur_accuracy)
+                    new_bitwidth, cur_accuracy = self.quantize_layer(i, layer, bitwidth_layers, self.quant_state, cur_accuracy, stoch)
                     bitwidth_layers[layer] = new_bitwidth
                     self.update_quant_state(bitwidth_layers)
                     # here: quant_state
@@ -348,9 +354,10 @@ class RLQuantization:
             
                 print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
                 print("Accuracy with new bit_widths is ", cur_accuracy)
+                return bitwidth_layers, cur_accuracy  
             
     
-    def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy):
+    def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy, stoch):
         global acc_cache
         #Building State
         intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm'], bitwidth_layers[layer_num]/32, quant_state, accuracy/self.fp_accuracy, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
@@ -673,7 +680,7 @@ def write_to_csv(step_data):
 acc_cache = {}
 headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward',
                         'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits', 'l5-bits', # CIFAR10
-                        'prob_2bits', 'prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_8bits']
+                        'prob_3bits', 'prob_4bits', 'prob_5bits','prob_6bits', 'prob_8bits']
 
 with open('releq_cifar_learning_history_log.csv', 'w') as writeFile:
     writer = csv.writer(writeFile)
@@ -700,8 +707,16 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2", "fc3"]
-rl_quant = RLQuantization(number_of_layers, 95.6, 1000, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
-rl_quant.quantize_layers()
-
-#print(sys.getsizeof(acc_cache))
+#rl_quant = RLQuantization(number_of_layers, 95.6, 1000, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+rl_quant = RLQuantization(number_of_layers, 62.6, 500, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+#rl_quant.quantize_layers()
+RL_bw, acc = rl_quant.quantize_layers()
+""" finetune stage  """
+# start finetuning 
+os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress ./cifar_bn_dorefa.yaml --epochs 10 --lr 0.01 --resume ./simplenet_cifar.pth.tar")
+# print accruacy after finetuning 
+print("RL bitwidth solution:", RL_bw)
+print("Initial accruacy with limited finetuning:", acc)
+cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
+print("Final accruacy after final finetuning:", cur_accuracy)
 
