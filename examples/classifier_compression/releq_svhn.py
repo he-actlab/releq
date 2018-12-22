@@ -341,10 +341,16 @@ class RLQuantization:
             sess.run(init)
 
             cur_accuracy = self.fp_accuracy
-            bitwidth_layers = [32 for i in range(self.num_layers)]
+            bitwidth_layers = [8 for i in range(self.num_layers)]
 
             for i in range(self.total_episodes):
                 print(bcolors.OKGREEN + "# Running epidode %d..." % (i) + bcolors.ENDC)
+
+                if (self.total_episodes - i) < 10:
+                    stoch = False
+                    print("taking deterministic actions") 
+                else:
+                    stoch = True 
 
                 for layer in range(self.num_layers): #Not Quantizing the first and last layers
                     new_bitwidth, cur_accuracy = self.quantize_layer(i, layer, bitwidth_layers, self.quant_state, cur_accuracy)
@@ -355,6 +361,7 @@ class RLQuantization:
             
                 print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
                 print("Accuracy with new bit_widths is ", cur_accuracy)
+            return bitwidth_layers, cur_accuracy  
             
     
     def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy):
@@ -704,6 +711,14 @@ for layer in range(number_of_layers):
 print(layer_state_info)
 layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
 rl_quant = RLQuantization(number_of_layers, 94.5, network_name, layer_names, layer_state_info) #num_layers, accuracy, network_name, layer_names, layer_stats
-rl_quant.quantize_layers()
-
+#rl_quant.quantize_layers()
+RL_bw, acc = rl_quant.quantize_layers()
+""" finetune stage  """
+# start finetuning 
+os.system("python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_dorefa.yaml --epochs 1 --resume ./svhn.pth.tar --lr 0.001")
+# print accruacy after finetuning 
+print("RL bitwidth solution:", RL_bw)
+print("Initial accruacy with limited finetuning:", acc)
+cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
+print("Final accruacy after final finetuning:", cur_accuracy)
 

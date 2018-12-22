@@ -354,7 +354,7 @@ class RLQuantization:
             
                 print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
                 print("Accuracy with new bit_widths is ", cur_accuracy)
-                return bitwidth_layers, cur_accuracy  
+            return bitwidth_layers, cur_accuracy  
             
     
     def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy, stoch):

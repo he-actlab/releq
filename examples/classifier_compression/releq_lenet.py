@@ -353,7 +353,7 @@ class RLQuantization:
             
                 print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
                 print("Accuracy with new bit_widths is ", cur_accuracy)
-                return bitwidth_layers, cur_accuracy  
+            return bitwidth_layers, cur_accuracy  
     
     def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy, stoch):
         global acc_cache
@@ -596,7 +596,7 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2"]
-rl_quant = RLQuantization(number_of_layers, 99.8, 2, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+rl_quant = RLQuantization(number_of_layers, 99.8, 700, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
 #rl_quant.quantize_layers()
 RL_bw, acc = rl_quant.quantize_layers()
 """ finetune stage  """
@@ -608,12 +608,5 @@ print("RL bitwidth solution:", RL_bw)
 print("Initial accruacy with limited finetuning:", acc)
 cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
 print("Final accruacy after finetuning:", cur_accuracy)
-
-
-
-
-
-
-
 
 
