@@ -280,13 +280,20 @@ class PPOTrain:
 
 
 class RLQuantization:
-    def __init__(self, num_layers, accuracy, num_episodes, num_act_episode, network_name, layer_names, layer_state_info):
+    def __init__(self, num_layers, accuracy, network_name, layer_names, layer_state_info):
+
+        self.yaml_config_file = "releq_config.yaml"
+        with open(self.yaml_config_file) as f:
+            self.yaml_config = yaml.load(f)
+        
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
-        self.n_act_p_episode     = num_act_episode   # number of actions per each episod (fix for now)
-        self.total_episodes        = num_episodes  # total number of observations used for training (in order)
+        self.n_act_p_episode     = 1 # number of actions per each episod (fix for now)
+        #self.total_episodes  = num_episodes  # total number of observations used for training (in order)
+        self.total_episodes = self.yaml_config["num_episodes"]
+
         self.network_name     = network_name  # defines the network name
 
-        self.supported_bit_widths = [3, 4, 5, 6, 8] 
+        self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] 
         self.max_bitwidth = max(self.supported_bit_widths)
         self.min_bitwidth = min(self.supported_bit_widths)
 
@@ -708,12 +715,13 @@ for layer in range(number_of_layers):
 print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2", "fc3"]
 #rl_quant = RLQuantization(number_of_layers, 95.6, 1000, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
-rl_quant = RLQuantization(number_of_layers, 62.6, 500, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+#rl_quant = RLQuantization(number_of_layers, 62.6, 500, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+rl_quant = RLQuantization(number_of_layers, 62.6, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
 #rl_quant.quantize_layers()
 RL_bw, acc = rl_quant.quantize_layers()
 """ finetune stage  """
 # start finetuning 
-os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress ./cifar_bn_dorefa.yaml --epochs 10 --lr 0.01 --resume ./simplenet_cifar.pth.tar")
+os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress ./cifar_bn_dorefa.yaml --epochs 20 --lr 0.01 --resume ./simplenet_cifar.pth.tar")
 # print accruacy after finetuning 
 print("RL bitwidth solution:", RL_bw)
 print("Initial accruacy with limited finetuning:", acc)

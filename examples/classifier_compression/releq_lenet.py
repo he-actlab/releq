@@ -280,13 +280,19 @@ class PPOTrain:
 
 
 class RLQuantization:
-    def __init__(self, num_layers, accuracy, num_episodes, num_act_episode, network_name, layer_names, layer_state_info):
+    def __init__(self, num_layers, accuracy, network_name, layer_names, layer_state_info):
+        self.yaml_config_file = "releq_config.yaml"
+        with open(self.yaml_config_file) as f:
+            self.yaml_config = yaml.load(f)
+        
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
-        self.n_act_p_episode 	= num_act_episode   # number of actions per each episod (fix for now)
-        self.total_episodes		= num_episodes  # total number of observations used for training (in order)
-        self.network_name 	= network_name  # defines the network name
+        self.n_act_p_episode = 1   # number of actions per each episod (fix for now)
 
-        self.supported_bit_widths = [2, 3, 4, 5, 6] #[2, 3, 4, 5, 8]
+        self.total_episodes = self.yaml_config["num_episodes"]
+
+        self.network_name     = network_name  # defines the network name
+
+        self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] 
         self.max_bitwidth = max(self.supported_bit_widths)
         self.min_bitwidth = min(self.supported_bit_widths)
 
@@ -312,7 +318,8 @@ class RLQuantization:
         self.layer_state_info = layer_state_info
         self.layer_names = layer_names
 
-        self.yaml_file = "lenet_bn_wrpn.yaml"
+        self.yaml_file = "lenet_bn_dorefa.yaml"
+        #self.yaml_file = "lenet_bn_wrpn.yaml"
         with open(self.yaml_file) as f:
             self.yaml_out = yaml.load(f)
     
@@ -421,7 +428,9 @@ class RLQuantization:
                cur_accuracy = acc_cache[str(new_bitwidth_layers)]
             else:
                # Accuracy -> distiller 
-               os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist_tf.pth.tar")
+               os.system("python3 compress_classifier_lenet.py --arch lenet_mnist ../../../data.mnist --resume lenet_mnist_converted_TF_4.pth.tar --epochs 0 --quantize-eval --compress  ./lenet_bn_dorefa.yaml")
+               #os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_dorefa.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist_tf.pth.tar")
+               #os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist_tf.pth.tar")
                #os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar")
                cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
             
@@ -512,7 +521,8 @@ class RLQuantization:
         #    self.yaml_out["quantizers"]["wrpn_quantizer"]["bits_overrides"][element]["wts"] = weight_bitwidth_layers[i]
 
         for i, layer_name in enumerate(self.layer_names):
-            self.yaml_out["quantizers"]["wrpn_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
+            self.yaml_out["quantizers"]["dorefa_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
+            #self.yaml_out["quantizers"]["wrpn_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
 
 
         with open(self.yaml_file, "w") as f:
@@ -596,17 +606,13 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2"]
-rl_quant = RLQuantization(number_of_layers, 99.8, 700, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+rl_quant = RLQuantization(number_of_layers, 99.8, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+#rl_quant = RLQuantization(number_of_layers, 99.8, 700, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
 #rl_quant.quantize_layers()
 RL_bw, acc = rl_quant.quantize_layers()
-""" finetune stage  """
-# start finetuning 
-#os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 20 --lr 0.01 --resume ./lenet_mnist_tf.pth.tar")
-os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_dorefa.yaml --epochs 1 --lr 0.001 --resume lenet_mnist_converted_TF_4.pth.tar")
-# print accruacy after finetuning 
 print("RL bitwidth solution:", RL_bw)
-print("Initial accruacy with limited finetuning:", acc)
-cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
-print("Final accruacy after finetuning:", cur_accuracy)
+print("Accruacy without finetuning:", acc)
+
+
 
 

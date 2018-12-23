@@ -1,4 +1,4 @@
 # releq configuration file
-network_name: 'svhn'
-num_episodes: 1000
-supported_bitwidths: [2, 3, 4, 5, 8]
+num_episodes: 2
+#supported_bitwidths: [2, 3, 4, 5, 8]
+supported_bitwidths: [4]

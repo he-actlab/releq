@@ -318,8 +318,8 @@ class RLQuantization:
         self.layer_state_info = layer_state_info
         self.layer_names = layer_names
 
-        #self.yaml_file = "cifar_bn_wrpn.yaml.yaml"
-        self.yaml_file = "svhn_bn_dorefa.yaml"
+        self.yaml_file = "cifar_bn_wrpn.yaml.yaml"
+        #self.yaml_file = "svhn_bn_dorefa.yaml"
         with open(self.yaml_file) as f:
             self.yaml_out = yaml.load(f)
         
@@ -429,8 +429,8 @@ class RLQuantization:
             if str(new_bitwidth_layers) in acc_cache:
                cur_accuracy = acc_cache[str(new_bitwidth_layers)]
             else:
-               #os.system("python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_wrpn.yaml --epochs 1 --resume ./svhn.pth.tar --lr 0.001")
-               os.system("python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_dorefa.yaml --epochs 1 --resume ./svhn.pth.tar --lr 0.001")
+               os.system("python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_wrpn.yaml --epochs 1 --resume ./svhn.pth.tar --lr 0.001")
+               #os.system("python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_dorefa.yaml --epochs 1 --resume ./svhn.pth.tar --lr 0.001")
                cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
                #cur_accuracy = self.nn_inference_func(self.network_name, new_bitwidth_layers) #self.nn_inference_func(self.network_name, episode_num, layer_num, new_bitwidth_layers)
                # acc-bw caching - CACHE UPDATE  
@@ -519,8 +519,8 @@ class RLQuantization:
         #    self.yaml_out["quantizers"]["wrpn_quantizer"]["bits_overrides"][element]["wts"] = weight_bitwidth_layers[i]
 
         for i, layer_name in enumerate(self.layer_names):
-            #self.yaml_out["quantizers"]["wrpn_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
-            self.yaml_out["quantizers"]["dorefa_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
+            self.yaml_out["quantizers"]["wrpn_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
+            #self.yaml_out["quantizers"]["dorefa_quantizer"]["bits_overrides"][layer_name]["wts"] = weight_bitwidth_layers[i]
 
 
         with open(self.yaml_file, "w") as f:
@@ -715,7 +715,8 @@ rl_quant = RLQuantization(number_of_layers, 94.5, network_name, layer_names, lay
 RL_bw, acc = rl_quant.quantize_layers()
 """ finetune stage  """
 # start finetuning 
-os.system("python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_dorefa.yaml --epochs 1 --resume ./svhn.pth.tar --lr 0.001")
+os.system("python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_wrpn.yaml --epochs 10 --resume ./svhn.pth.tar --lr 0.001")
+#os.system("python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_dorefa.yaml --epochs 10 --resume ./svhn.pth.tar --lr 0.001")
 # print accruacy after finetuning 
 print("RL bitwidth solution:", RL_bw)
 print("Initial accruacy with limited finetuning:", acc)
