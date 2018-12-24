@@ -26,8 +26,6 @@ https://github.com/NervanaSystems/distiller
 
 License:
 ---------------------------------
-MIT License
-
 
 
 
