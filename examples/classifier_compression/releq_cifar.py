@@ -430,7 +430,7 @@ class RLQuantization:
                cur_accuracy = acc_cache[str(new_bitwidth_layers)]
             else:
                # Accruacy -> distiller 
-               os.system("pythonn3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress cifar_bn_wrpn.yaml --epochs 10 --lr 0.001 --resume ./simplenet_cifar.pth.tar")
+               os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress cifar_bn_wrpn.yaml --epochs 10 --lr 0.001 --resume ./simplenet_cifar.pth.tar")
                cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
                #os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress ./cifar_bn_dorefa.yaml --epochs 10 --lr 0.01 --resume ./simplenet_cifar.pth.tar")
                #os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress ./cifar_bn_wrpn.yaml --epochs 10 --lr 0.01 --resume ./simplenet_cifar.pth.tar")
@@ -722,7 +722,7 @@ rl_quant = RLQuantization(number_of_layers, 63.4, network_name, layer_names, lay
 RL_bw, acc = rl_quant.quantize_layers()
 """ finetune stage  """
 # start finetuning 
-os.system("pythonn3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress cifar_bn_wrpn.yaml --epochs 10 --lr 0.001 --resume ./simplenet_cifar.pth.tar")
+os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress cifar_bn_wrpn.yaml --epochs 10 --lr 0.001 --resume ./simplenet_cifar.pth.tar")
 #os.system("python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress ./cifar_bn_dorefa.yaml --epochs 20 --lr 0.01 --resume ./simplenet_cifar.pth.tar")
 # print accruacy after finetuning 
 print("RL bitwidth solution:", RL_bw)
