@@ -1,0 +1,10 @@
+Required python modules:
+---------------------------
+pip install pyyaml
+pip install pandas
+pip install torch 
+pip install torchnet
+pip install torchvision
+pip install tabulate
+pip install pydot
+pip install gitpython
