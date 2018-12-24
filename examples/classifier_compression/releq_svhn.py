@@ -318,7 +318,7 @@ class RLQuantization:
         self.layer_state_info = layer_state_info
         self.layer_names = layer_names
 
-        self.yaml_file = "svhn_bn_dorefa.yaml"
+        self.yaml_file = "svhn_bn_wrpn.yaml"
         with open(self.yaml_file) as f:
             self.yaml_out = yaml.load(f)
         
