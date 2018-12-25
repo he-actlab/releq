@@ -440,8 +440,8 @@ class RLQuantization:
 
             self.update_quant_state(new_bitwidth_layers)
 
-            reward = self.calculate_reward_shaping(cur_accuracy)
-            #reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
+            #reward = self.calculate_reward_shaping(cur_accuracy)
+            reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
 
             s[3] = cur_accuracy/self.fp_accuracy # ACC state
             # AHMED: debug
