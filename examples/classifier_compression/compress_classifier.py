@@ -426,7 +426,8 @@ def main():
             save_collectors_data(collectors, msglogger.logdir)
 
         f= open("val_accuracy.txt","w+")
-        f.write(str(top5))
+        f.write(str(top1))
+        #f.write(str(top5))
         f.close()
         stats = ('Peformance/Validation/',
                  OrderedDict([('Loss', vloss),
