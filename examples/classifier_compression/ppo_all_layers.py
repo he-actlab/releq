@@ -664,7 +664,8 @@ class RLQuantization:
                         
                         # train
                         for epoch in range(1):
-                            sample_indices = np.random.randint(low=0, high=observations.shape[0], size=num_layers_together)  # indices are in [low, high)
+                            #sample_indices = np.random.randint(low=0, high=observations.shape[0], size=num_layers_together)  # indices are in [low, high)
+                            sample_indices = np.arange(observations.shape[0])
                             sampled_inp = [np.take(a=a, indices=sample_indices, axis=0) for a in inp]  # sample training data
                             print(sampled_inp)
                             self.PPO.train(obs=sampled_inp[0], actions=sampled_inp[1], rewards=sampled_inp[2], v_preds_next=sampled_inp[3], gaes=sampled_inp[4])
