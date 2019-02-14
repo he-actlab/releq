@@ -289,7 +289,7 @@ class RLQuantization:
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
         self.n_act_p_episode     = 1  # number of actions per each episod (fix for now)
         #self.total_episodes        = num_episodes  # total number of observations used for training (in order)
-        self.total_episodes = 700
+        self.total_episodes = 2000
         self.network_name     = network_name  # defines the network name
 
         #self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] #[2, 3, 4, 5, 8]
@@ -627,11 +627,22 @@ class RLQuantization:
                     bitwidth_layers[layer_num] = new_bitwidth
                     print("Bitwidth layers ",  bitwidth_layers)
                     self.update_yaml_file(bitwidth_layers)
-                    os.system(self.training_cmd)
-                    cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
+                    if (layer_num+1) % num_layers_together == 0 or layer_num == self.num_layers-1:
+                        os.system(self.training_cmd)
+                        cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
+                        self.quant_reward_const = cur_accuracy/self.fp_accuracy
+                        #Use new reward function
+                        #reward = self.calculate_network_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers)
+                        reward = self.calculate_reward_shaping(cur_accuracy)
+                    else:
+                        cur_accuracy = 0
+                        reward = 0
+                    #rewards.append(reward)
+                    #os.system(self.training_cmd)
+                    #cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
                     self.quant_reward_const = cur_accuracy/self.fp_accuracy
                     #Use new reward function
-                    reward = self.calculate_reward_shaping(cur_accuracy)
+                    #reward = self.calculate_reward_shaping(cur_accuracy)
                     rewards.append(reward)
 
                     self.update_quant_state(bitwidth_layers)
@@ -664,9 +675,10 @@ class RLQuantization:
                         
                         # train
                         for epoch in range(1):
-                            sample_indices = np.random.randint(low=0, high=observations.shape[0], size=num_layers_together)  # indices are in [low, high)
+                            #sample_indices = np.random.randint(low=0, high=observations.shape[0], size=num_layers_together)  # indices are in [low, high)
+                            sample_indices = np.arange(observations.shape[0])
                             sampled_inp = [np.take(a=a, indices=sample_indices, axis=0) for a in inp]  # sample training data
-                            print(sampled_inp)
+                            #print(sampled_inp)
                             self.PPO.train(obs=sampled_inp[0], actions=sampled_inp[1], rewards=sampled_inp[2], v_preds_next=sampled_inp[3], gaes=sampled_inp[4])
                         
                         summary = self.PPO.get_summary(obs=inp[0], actions=inp[1], rewards=inp[2], v_preds_next=inp[3], gaes=inp[4])[0]
@@ -694,8 +706,8 @@ headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward',
 
 
 network_name = "cifar10"
+file_name = "releq_cifar10_learning_history_log.csv"
 number_of_layers = 5 #cifar
-file_name = 'releq_cifar10_learning_history_log.csv'
 layer_info = StringIO("""layer_idx_norm;n;c;k;std;c_out
 1;6;3;5;0.23009;6
 2;16;6;5;0.11020;400
@@ -718,10 +730,10 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2", "fc3"]
-training_cmd = "python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress cifar_bn_wrpn.yaml --epochs 10 --lr 0.001 --resume ./simplenet_cifar.pth.tar"
+training_cmd = "python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress cifar_bn_wrpn.yaml --epochs 8  --lr 0.001 --resume ./simplenet_cifar.pth.tar"
 yaml_file = "cifar_bn_wrpn.yaml"
 quant_type = "wrpn_quantizer"
-rl_quant = RLQuantization(number_of_layers, 72.3, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+rl_quant = RLQuantization(number_of_layers, 75, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
 
 
