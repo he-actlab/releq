@@ -289,11 +289,11 @@ class RLQuantization:
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
         self.n_act_p_episode     = 1 # number of actions per each episod (fix for now)
         #self.total_episodes  = num_episodes  # total number of observations used for training (in order)
-        self.total_episodes = self.yaml_config["num_episodes"]
+        self.total_episodes = 2000 #self.yaml_config["num_episodes"]
 
         self.network_name     = network_name  # defines the network name
 
-        self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] 
+        self.supported_bit_widths = [2, 3, 4, 5, 8] #self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] 
         self.max_bitwidth = max(self.supported_bit_widths)
         self.min_bitwidth = min(self.supported_bit_widths)
 
@@ -367,7 +367,7 @@ class RLQuantization:
     def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy, stoch):
         global acc_cache
         #Building State
-        intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm'], bitwidth_layers[layer_num]/32, quant_state, accuracy/self.fp_accuracy, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
+        intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm']/len(bitwidth_layers), bitwidth_layers[layer_num]/8, quant_state, accuracy/self.fp_accuracy, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
         cur_accuracy = accuracy
         prev_accuracy = accuracy
         new_bitwidth = bitwidth_layers[layer_num]
@@ -536,7 +536,7 @@ class RLQuantization:
             yaml.dump(self.yaml_out, f, default_flow_style=False)
     
     def calculate_reward_shaping(self, cur_accuracy):
-        margin = 0.4
+        margin = 0.1
         a = 0.8
         b = 1
         x_min = self.min_bitwidth/self.max_bitwidth
