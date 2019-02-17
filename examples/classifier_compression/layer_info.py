@@ -27,10 +27,10 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
-training_cmd = "python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_dorefa.yaml --epochs 5 --resume ./svhn.pth.tar --lr 0.001"
-yaml_file = "svhn_bn_dorefa.yaml"
-quant_type = "dorefa_quantizer"
-rl_quant = RLQuantization(number_of_layers, 94.5, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+training_cmd = "python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress svhn_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume svhn.pth.tar"
+yaml_file = "svhn_bn_wrpn.yaml"
+quant_type = "wrpn_quantizer"
+rl_quant = RLQuantization(number_of_layers, 97, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
 #-----------------------------------------------------------------------------------------
 network_name = "resnet-20"

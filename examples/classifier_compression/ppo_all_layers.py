@@ -531,7 +531,7 @@ class RLQuantization:
    
 
     def calculate_reward_shaping(self, cur_accuracy):
-        margin = 0.5
+        margin = 0.1
         a = 0.8
         b = 1
         x_min = self.min_bitwidth/self.max_bitwidth
@@ -544,7 +544,7 @@ class RLQuantization:
         else:
             acc_discount = (max(y, margin))**(b/max(y, margin))
             reward = 2*(reward * acc_discount - 0.5)
-        return reward 
+        return reward
     
  
     def calculate_reward(self, cur_accuracy, prev_accuracy, cur_bitwidth, new_bitwidth):
@@ -583,6 +583,7 @@ class RLQuantization:
 
             for i in range(self.total_episodes):
                 bitwidth_layers = [8 for i in range(self.num_layers)]
+                self.update_quant_state(bitwidth_layers)
                 print(bcolors.OKGREEN + "# Running epidode %d..." % (i) + bcolors.ENDC)
                 s_history  = []
                 a_history  = []
@@ -590,7 +591,7 @@ class RLQuantization:
                 v_preds = []
 
                 for layer_num in range(self.num_layers):
-                    intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm'], bitwidth_layers[layer_num]/8, self.quant_state, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
+                    intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm']/self.num_layers, bitwidth_layers[layer_num]/8, self.quant_state, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
 
                     s = intial_layer_state
 
@@ -600,7 +601,8 @@ class RLQuantization:
 
                     #if layer_num == 1:
                     #    self.Policy.rnn_state_in = self.Policy.rnn_initial_state_in
-                
+
+                    #print("State ", s)
                     act_index, v_pred = self.Policy.act(obs=[s], stochastic=True)
                     print("Action Probabilities ", self.Policy.get_action_prob(obs=[s]))
                     l1w, l2w, l3w = self.Policy.get_policy_weights()
@@ -635,6 +637,7 @@ class RLQuantization:
                         #Use new reward function
                         #reward = self.calculate_network_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers)
                         reward = self.calculate_reward_shaping(cur_accuracy)
+                        print("Reward is ", reward)
                     else:
                         cur_accuracy = 0
                         reward = 0
@@ -733,9 +736,9 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
-training_cmd = "python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress ./svhn_bn_dorefa.yaml --epochs 5 --resume ./svhn.pth.tar --lr 0.001"
-yaml_file = "svhn_bn_dorefa.yaml"
-quant_type = "dorefa_quantizer"
-rl_quant = RLQuantization(number_of_layers, 94.5, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+training_cmd = "python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress svhn_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume svhn.pth.tar"
+yaml_file = "svhn_bn_wrpn.yaml"
+quant_type = "wrpn_quantizer"
+rl_quant = RLQuantization(number_of_layers, 97, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
 
