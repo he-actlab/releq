@@ -449,8 +449,8 @@ class RLQuantization:
             self.update_quant_state(new_bitwidth_layers)
 
             # calculate reward 
-            reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
-            #reward = self.calculate_reward_shaping(cur_accuracy)
+            #reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
+            reward = self.calculate_reward_shaping(cur_accuracy)
             
             s[3] = cur_accuracy/self.fp_accuracy # ACC state
             # AHMED: debug
@@ -717,7 +717,7 @@ print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2", "fc3"]
 #rl_quant = RLQuantization(number_of_layers, 95.6, 1000, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
 #rl_quant = RLQuantization(number_of_layers, 62.6, 500, 1, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
-rl_quant = RLQuantization(number_of_layers, 63.4, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
+rl_quant = RLQuantization(number_of_layers, 75, network_name, layer_names, layer_state_info) #num_layers, accuracy, num_episodes, num_act_episode, network_name, nn_inference_func
 #rl_quant.quantize_layers()
 RL_bw, acc = rl_quant.quantize_layers()
 """ finetune stage  """
