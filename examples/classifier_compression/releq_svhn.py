@@ -289,10 +289,10 @@ class RLQuantization:
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
         self.n_act_p_episode     = 1  # number of actions per each episod (fix for now)
         #self.total_episodes        = num_episodes  # total number of observations used for training (in order)
-        self.total_episodes = self.yaml_config["num_episodes"]
+        self.total_episodes = 2000 #self.yaml_config["num_episodes"]
         self.network_name     = network_name  # defines the network name
 
-        self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] #[2, 3, 4, 5, 8]
+        self.supported_bit_widths = [2, 3, 4, 5, 8] #self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] #[2, 3, 4, 5, 8]
         self.max_bitwidth = max(self.supported_bit_widths)
         self.min_bitwidth = min(self.supported_bit_widths)
 
@@ -366,7 +366,7 @@ class RLQuantization:
     def quantize_layer(self, episode_num, layer_num, bitwidth_layers, quant_state, accuracy):
         #Building State
         global acc_cache
-        intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm'], bitwidth_layers[layer_num]/32, quant_state, accuracy/self.fp_accuracy, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
+        intial_layer_state = [self.layer_state_info.loc[layer_num, 'layer_idx_norm']/len(bitwidth_layers), bitwidth_layers[layer_num]/8, quant_state, accuracy/self.fp_accuracy, self.layer_state_info.loc[layer_num, 'n'], self.layer_state_info.loc[layer_num, 'c'], self.layer_state_info.loc[layer_num, 'k'], self.layer_state_info.loc[layer_num, 'std']]
         cur_accuracy = accuracy
         prev_accuracy = accuracy
         new_bitwidth = bitwidth_layers[layer_num]
@@ -440,8 +440,8 @@ class RLQuantization:
 
             self.update_quant_state(new_bitwidth_layers)
 
-            #reward = self.calculate_reward_shaping(cur_accuracy)
-            reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
+            reward = self.calculate_reward_shaping(cur_accuracy)
+            #reward = self.calculate_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers[layer_num], new_bitwidth)
 
             s[3] = cur_accuracy/self.fp_accuracy # ACC state
             # AHMED: debug
@@ -528,7 +528,7 @@ class RLQuantization:
    
 
     def calculate_reward_shaping(self, cur_accuracy):
-        margin = 0.7
+        margin = 0.1
         a = 0.8
         b = 1
         x_min = self.min_bitwidth/self.max_bitwidth
@@ -710,7 +710,7 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
-rl_quant = RLQuantization(number_of_layers, 92.5, network_name, layer_names, layer_state_info) #num_layers, accuracy, network_name, layer_names, layer_stats
+rl_quant = RLQuantization(number_of_layers, 75, network_name, layer_names, layer_state_info) #num_layers, accuracy, network_name, layer_names, layer_stats
 #rl_quant.quantize_layers()
 RL_bw, acc = rl_quant.quantize_layers()
 """ finetune stage  """
