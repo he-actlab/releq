@@ -710,7 +710,7 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
-rl_quant = RLQuantization(number_of_layers, 75, network_name, layer_names, layer_state_info) #num_layers, accuracy, network_name, layer_names, layer_stats
+rl_quant = RLQuantization(number_of_layers, 97, network_name, layer_names, layer_state_info) #num_layers, accuracy, network_name, layer_names, layer_stats
 #rl_quant.quantize_layers()
 RL_bw, acc = rl_quant.quantize_layers()
 """ finetune stage  """
