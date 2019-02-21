@@ -290,7 +290,7 @@ class RLQuantization:
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
         self.n_act_p_episode     = 1  # number of actions per each episod (fix for now)
         #self.total_episodes        = num_episodes  # total number of observations used for training (in order)
-        self.total_episodes = 2
+        self.total_episodes = 2000
         self.network_name     = network_name  # defines the network name
 
         #self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] #[2, 3, 4, 5, 8]
