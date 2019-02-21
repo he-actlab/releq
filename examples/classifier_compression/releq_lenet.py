@@ -286,13 +286,13 @@ class RLQuantization:
             self.yaml_config = yaml.load(f)
         
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
-        self.n_act_p_episode = 1   # number of actions per each episod (fix for now)
+        self.n_act_p_episode = 2000   # number of actions per each episod (fix for now)
 
         self.total_episodes = self.yaml_config["num_episodes"]
 
         self.network_name     = network_name  # defines the network name
 
-        self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] 
+        self.supported_bit_widths = [2, 3, 4, 5, 8] #self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] 
         self.max_bitwidth = max(self.supported_bit_widths)
         self.min_bitwidth = min(self.supported_bit_widths)
 
@@ -428,10 +428,10 @@ class RLQuantization:
                cur_accuracy = acc_cache[str(new_bitwidth_layers)]
             else:
                # Accuracy -> distiller 
-               os.system("python3 compress_classifier_lenet.py --arch lenet_mnist ../../../data.mnist --resume lenet_mnist_converted_TF_4.pth.tar --epochs 0 --quantize-eval --compress  ./lenet_bn_dorefa.yaml")
+               #os.system("python3 compress_classifier_lenet.py --arch lenet_mnist ../../../data.mnist --resume lenet_mnist_converted_TF_4.pth.tar --epochs 0 --quantize-eval --compress  ./lenet_bn_dorefa.yaml")
                #os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_dorefa.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist_tf.pth.tar")
                #os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist_tf.pth.tar")
-               #os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar")
+               os.system("python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_dorefa.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar")
                cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
             
                # acc-bw caching - CACHE UPDATE  

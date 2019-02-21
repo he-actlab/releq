@@ -17,6 +17,7 @@ import pandas
 import random
 import yaml
 from io import StringIO
+import pickle
 ##
 # TensorFlow Policy Gradient
 ##
@@ -289,7 +290,7 @@ class RLQuantization:
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
         self.n_act_p_episode     = 1  # number of actions per each episod (fix for now)
         #self.total_episodes        = num_episodes  # total number of observations used for training (in order)
-        self.total_episodes = 2000
+        self.total_episodes = 2
         self.network_name     = network_name  # defines the network name
 
         #self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] #[2, 3, 4, 5, 8]
@@ -321,10 +322,14 @@ class RLQuantization:
 
         self.training_cmd = cmd
         self.quant_type = quant_type
-        #self.yaml_file = "cifar_bn_wrpn.yaml.yaml"
         self.yaml_file = yaml_file #"svhn_bn_dorefa.yaml"
         with open(self.yaml_file) as f:
             self.yaml_out = yaml.load(f)
+        try:
+            with open(accuracy_cache_file, "rb") as myFile:
+                self.accuracy_cache = pickle.load(myFile)
+        except:
+            self.accuracy_cache = {}
         
     
     def quantize_layers(self):
@@ -531,11 +536,11 @@ class RLQuantization:
    
 
     def calculate_reward_shaping(self, cur_accuracy):
-        margin = 0.1
+        margin = 0.7
         a = 0.8
         b = 1
         x_min = self.min_bitwidth/self.max_bitwidth
-        x = self.quant_state - x_min  # QUANT state 
+        x = self.quant_state - x_min # QUANT state
         acc_state = cur_accuracy/self.fp_accuracy # ACC state 
         y = acc_state
         reward = 1 - x**a
@@ -543,7 +548,8 @@ class RLQuantization:
             reward = -1
         else:
             acc_discount = (max(y, margin))**(b/max(y, margin))
-            reward = 2*(reward * acc_discount - 0.5)
+            #reward = 2*(reward * acc_discount - 0.5)
+            reward = (reward * acc_discount)
         return reward
     
  
@@ -631,8 +637,14 @@ class RLQuantization:
                     self.update_yaml_file(bitwidth_layers)
                     self.update_quant_state(bitwidth_layers)
                     if (layer_num+1) % num_layers_together == 0 or layer_num == self.num_layers-1:
-                        os.system(self.training_cmd)
-                        cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
+                        if str(bitwidth_layers) in self.accuracy_cache:
+                            cur_accuracy = self.accuracy_cache[str(bitwidth_layers)]
+                            print("Taking Accuracy from the Cache ", cur_accuracy)
+                        else:
+                            os.system(self.training_cmd)
+                            cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
+                            self.accuracy_cache[str(bitwidth_layers)] = cur_accuracy
+
                         self.quant_reward_const = cur_accuracy/self.fp_accuracy
                         #Use new reward function
                         #reward = self.calculate_network_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers)
@@ -650,7 +662,7 @@ class RLQuantization:
                     rewards.append(reward)
 
                     
-                    data = [i, layer_num, self.quant_state, cur_accuracy, reward]
+                    data = [i, layer_num, self.quant_state, cur_accuracy/self.fp_accuracy, reward]
                     data2 = self.Policy.get_action_prob(obs=[s])
                     for each in bitwidth_layers:
                         data.append(each)
@@ -697,6 +709,9 @@ class RLQuantization:
                     print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
                     print("Accuracy with new bit_widths is ", cur_accuracy)
 
+        with open(accuracy_cache_file, "wb") as myFile:
+            pickle.dump(self.accuracy_cache, myFile)
+
 def write_to_csv(step_data):
     with open(file_name, 'a') as csvFile:
         writer = csv.writer(csvFile)
@@ -705,21 +720,18 @@ def write_to_csv(step_data):
 # initializing acc_cache dict to use it as global var.
 acc_cache = {}
 headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward',
-                        'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits', 'l5-bits', 'l6-bits', 'l7-bits', 'l8-bits', 
+                        'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits', 'l5-bits'
                         'prob_2bits','prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_8bits']
 
-network_name = "svhn"
-number_of_layers = 8
-file_name = "releq_svhn_learning_history_log.csv"
-layer_info = StringIO("""layer_idx_norm;n;c;k;std
-1;32;3;3;0.18325
-2;32;32;3;0.04787
-3;64;32;3;0.04403
-4;64;64;3;0.03448
-5;128;64;3;0.03441
-6;128;128;3;0.02876
-7;256;128;3;0.02559
-8;10;256;0;0.09887""")
+network_name = "cifar10"
+file_name = "releq_cifar10_learning_history_log.csv"
+number_of_layers = 5 #cifar
+layer_info = StringIO("""layer_idx_norm;n;c;k;std;c_out
+1;6;3;5;0.23009;6
+2;16;6;5;0.11020;400
+3;120;400;0;0.04013;120
+4;84;120;0;0.06537;84
+5;10;84;0;0.14734;1""")
 with open(file_name, 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerow(headers)
@@ -735,10 +747,10 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'c'] = (layer_state_info.loc[layer, 'c'] - min_c)/(max_c - min_c)
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
-layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
-training_cmd = "python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress svhn_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume svhn.pth.tar"
-yaml_file = "svhn_bn_wrpn.yaml"
+layer_names = ["conv1", "conv2", "fc1", "fc2", "fc3"]
+training_cmd = "python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress cifar_bn_wrpn.yaml --epochs 10 --lr 0.001 --resume ./simplenet_cifar.pth.tar"
+yaml_file = "cifar_bn_wrpn.yaml"
+accuracy_cache_file = "cifar_accuracy_cache.txt"
 quant_type = "wrpn_quantizer"
-rl_quant = RLQuantization(number_of_layers, 97, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+rl_quant = RLQuantization(number_of_layers, 75, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
-

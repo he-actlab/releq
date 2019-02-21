@@ -29,6 +29,7 @@ print(layer_state_info)
 layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
 training_cmd = "python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress svhn_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume svhn.pth.tar"
 yaml_file = "svhn_bn_wrpn.yaml"
+accuracy_cache_file = "svhn_accuracy_cache.txt"
 quant_type = "wrpn_quantizer"
 rl_quant = RLQuantization(number_of_layers, 97, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
@@ -76,6 +77,7 @@ print(layer_state_info)
 layer_names = ["layer1.0.conv1", "layer1.0.conv2", "layer1.1.conv1", "layer1.1.conv2", "layer1.2.conv1", "layer1.2.conv2", "layer2.0.conv1", "layer2.0.conv2", "layer2.0.downsample.0", "layer2.1.conv1", "layer2.1.conv2", "layer2.2.conv1", "layer2.2.conv2", "layer3.0.conv1", "layer3.0.conv2", "layer3.0.downsample.0", "layer3.1.conv1", "layer3.1.conv2", "layer3.2.conv1", "layer3.2.conv2"]
 training_cmd = "python3 compress_classifier.py --arch resnet20_cifar ../../../data.cifar --epochs 10 --lr 0.001 --resume resnet.pth.tar --compress resnet_bn_dorefa.yaml"
 yaml_file = "resnet_bn_dorefa.yaml"
+accuracy_cache_file = "resnet20_accuracy_cache.txt"
 quant_type = "dorefa_quantizer"
 rl_quant = RLQuantization(number_of_layers, 93, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
@@ -104,8 +106,9 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2"]
-training_cmd = "python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_dorefa.yaml --epochs 5 --lr 0.01 --resume ./lenet_mnist.pth.tar"
+training_cmd = "python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_dorefa.yaml --epochs 5 --lr 0.001 --resume ./lenet_mnist.pth.tar"
 yaml_file = "lenet_bn_dorefa.yaml"
+accuracy_cache_file = "lenet_accuracy_cache.txt"
 quant_type = "dorefa_quantizer"
 rl_quant = RLQuantization(number_of_layers, 99.8, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
@@ -137,8 +140,9 @@ print(layer_state_info)
 layer_names = ["conv1", "conv2", "fc1", "fc2", "fc3"]
 training_cmd = "python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress cifar_bn_wrpn.yaml --epochs 10 --lr 0.001 --resume ./simplenet_cifar.pth.tar"
 yaml_file = "cifar_bn_wrpn.yaml"
+accuracy_cache_file = "cifar_accuracy_cache.txt"
 quant_type = "wrpn_quantizer"
-rl_quant = RLQuantization(number_of_layers, 72.3, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+rl_quant = RLQuantization(number_of_layers, 75, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
 #-------------------------------------------------------------------------------------------
 network_name = "alexnet"
@@ -170,6 +174,7 @@ print(layer_state_info)
 layer_names = ["features.3", "features.6", "features.8", "features.10", "classifier.1", "classifier.4"]
 training_cmd = "python3 compress_classifier.py --arch alexnet ../../../data.imagenet_100 --epochs 2 --resume alexnet.pth.tar --lr 0.001 --quantize-eval --compress alexnet_bn_dorefa.yaml"
 yaml_file = "alexnet_bn_dorefa.yaml"
+accuracy_cache_file = "alexnet_accuracy_cache.txt"
 quant_type = "dorefa_quantizer"
 rl_quant = RLQuantization(number_of_layers, 82.78, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
