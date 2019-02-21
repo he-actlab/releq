@@ -536,7 +536,7 @@ class RLQuantization:
    
 
     def calculate_reward_shaping(self, cur_accuracy):
-        margin = 0.7
+        margin = 0.1
         a = 0.8
         b = 1
         x_min = self.min_bitwidth/self.max_bitwidth
