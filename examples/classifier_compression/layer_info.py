@@ -183,13 +183,13 @@ network_name = "vgg11"
 number_of_layers = 7
 file_name = "releq_vgg11_learning_history_log.csv"
 layer_info = StringIO("""layer_idx_norm;n;c;k;std
-1;128;64;3;0.04522
-2;256;128;3;0.03049
-3;256;256;3;0.02952
-4;512;256;3;0.02094
-5;512;512;3;0.02054
-6;512;512;3;0.02046
-7;512;512;3;0.02040
+0;128;64;3;0.04522
+1;256;128;3;0.03049
+2;256;256;3;0.02952
+3;512;256;3;0.02094
+4;512;512;3;0.02054
+5;512;512;3;0.02046
+6;512;512;3;0.02040
 """)
 with open(file_name, 'w') as writeFile:
     writer = csv.writer(writeFile)
@@ -204,7 +204,7 @@ max_k = max(layer_state_info.loc[:, 'k'])
 for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'n'] = (layer_state_info.loc[layer, 'n'] - min_n)/(max_n - min_n)
     layer_state_info.loc[layer, 'c'] = (layer_state_info.loc[layer, 'c'] - min_c)/(max_c - min_c)
-    layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
+    layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'])/2.0
 print(layer_state_info)
 layer_names = ["features.3", "features.6", "features.8", "features.11", "features.13", "features.16", "features.18"]
 training_cmd = "python3 compress_classifier.py --arch vgg11_cifar ../../../data.cifar --epochs 10 --lr 0.0001 --resume vgg11.pth.tar --compress vgg11_bn_wrpn.yaml"
