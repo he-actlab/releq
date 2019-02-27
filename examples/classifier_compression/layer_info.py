@@ -183,13 +183,13 @@ network_name = "vgg11"
 number_of_layers = 7
 file_name = "releq_vgg11_learning_history_log.csv"
 layer_info = StringIO("""layer_idx_norm;n;c;k;std
-1;128;64;3;0.04522
-2;256;128;3;0.03049
-3;256;256;3;0.02952
-4;512;256;3;0.02094
-5;512;512;3;0.02054
-6;512;512;3;0.02046
-7;512;512;3;0.02040
+0;128;64;3;0.04522
+1;256;128;3;0.03049
+2;256;256;3;0.02952
+3;512;256;3;0.02094
+4;512;512;3;0.02054
+5;512;512;3;0.02046
+6;512;512;3;0.02040
 """)
 with open(file_name, 'w') as writeFile:
     writer = csv.writer(writeFile)
