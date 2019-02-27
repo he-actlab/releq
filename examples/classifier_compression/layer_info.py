@@ -204,7 +204,7 @@ max_k = max(layer_state_info.loc[:, 'k'])
 for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'n'] = (layer_state_info.loc[layer, 'n'] - min_n)/(max_n - min_n)
     layer_state_info.loc[layer, 'c'] = (layer_state_info.loc[layer, 'c'] - min_c)/(max_c - min_c)
-    layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
+    layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'])/2.0
 print(layer_state_info)
 layer_names = ["features.3", "features.6", "features.8", "features.11", "features.13", "features.16", "features.18"]
 training_cmd = "python3 compress_classifier.py --arch vgg11_cifar ../../../data.cifar --epochs 10 --lr 0.0001 --resume vgg11.pth.tar --compress vgg11_bn_wrpn.yaml"
