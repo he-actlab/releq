@@ -290,8 +290,8 @@ class RLQuantization:
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
         self.n_act_p_episode     = 1  # number of actions per each episod (fix for now)
         #self.total_episodes        = num_episodes  # total number of observations used for training (in order)
-        self.total_episodes = 2500
-        self.network_name     = network_name  # defines the network name
+        self.total_episodes = 3000
+        self.network_name   = network_name  # defines the network name
 
         #self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] #[2, 3, 4, 5, 8]
         self.supported_bit_widths = [2, 3, 4, 5, 8]
@@ -325,11 +325,6 @@ class RLQuantization:
         self.yaml_file = yaml_file #"svhn_bn_dorefa.yaml"
         with open(self.yaml_file) as f:
             self.yaml_out = yaml.load(f)
-        try:
-            with open(accuracy_cache_file, "rb") as myFile:
-                self.accuracy_cache = pickle.load(myFile)
-        except:
-            self.accuracy_cache = {}
         
     
     def quantize_layers(self):
@@ -535,7 +530,7 @@ class RLQuantization:
             yaml.dump(self.yaml_out, f, default_flow_style=False)
    
 
-    def calculate_reward_shaping(self, cur_accuracy):
+    def calculate_reward_shaping(self, cur_accuracy, bitwidth_layers):
         '''
         margin = 0.1
         a = 0.8
@@ -552,11 +547,11 @@ class RLQuantization:
             #reward = 2*(reward * acc_discount - 0.5)
             reward = (reward * acc_discount)
         '''
-        levels=50
+        levels=100
         ylim = 1.00
         min_quant=self.min_bitwidth/self.max_bitwidth
         q_weight=0.5
-        a_weight=0.5
+        a_weight=1.0-q_weight
 
         # generate 2 2d grids for the x & y bounds
         nx = np.linspace(0, 1.0, levels)
@@ -579,9 +574,18 @@ class RLQuantization:
         x = int(self.quant_state*levels) - 1 
         y =  int(acc_state*levels) - 1
         #print(x, y, self.quant_state, acc_state)
-        reward = z[x][y]
+        reward = 0.8*z[x][y] + 0.2*len(set(bitwidth_layers))/len(bitwidth_layers)
         return reward*10
     
+    def calculate_imaginary_accuracy(self):
+        y_min = 0.0 #Min Accuracy State
+        x_min = 0.25 #Min Quant State
+        m = (1 - y_min)/(0.65 - x_min)
+        b = 1 - 0.65*m
+        acc_state = m*self.quant_state + b
+        if acc_state >= 1:
+            acc_state = 1 
+        return acc_state*self.fp_accuracy
  
     def calculate_reward(self, cur_accuracy, prev_accuracy, cur_bitwidth, new_bitwidth):
         print("Acc Diff", cur_accuracy - prev_accuracy)
@@ -667,18 +671,14 @@ class RLQuantization:
                     self.update_yaml_file(bitwidth_layers)
                     self.update_quant_state(bitwidth_layers)
                     if (layer_num+1) % num_layers_together == 0 or layer_num == self.num_layers-1:
-                        if str(bitwidth_layers) in self.accuracy_cache:
-                            cur_accuracy = self.accuracy_cache[str(bitwidth_layers)]
-                            print("Taking Accuracy from the Cache ", cur_accuracy)
-                        else:
-                            os.system(self.training_cmd)
-                            cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
-                            self.accuracy_cache[str(bitwidth_layers)] = cur_accuracy
+                        #os.system(self.training_cmd)
+                        #cur_accuracy = float(open("val_accuracy.txt").readlines()[0])
+                        cur_accuracy = self.calculate_imaginary_accuracy()
 
                         self.quant_reward_const = cur_accuracy/self.fp_accuracy
                         #Use new reward function
                         #reward = self.calculate_network_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers)
-                        reward = self.calculate_reward_shaping(cur_accuracy)
+                        reward = self.calculate_reward_shaping(cur_accuracy, bitwidth_layers)
                         print("Reward is ", reward)
                     else:
                         cur_accuracy = 0
@@ -739,8 +739,6 @@ class RLQuantization:
                     print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
                     print("Accuracy with new bit_widths is ", cur_accuracy)
 
-        with open(accuracy_cache_file, "wb") as myFile:
-            pickle.dump(self.accuracy_cache, myFile)
 
 def write_to_csv(step_data):
     with open(file_name, 'a') as csvFile:
@@ -750,12 +748,12 @@ def write_to_csv(step_data):
 # initializing acc_cache dict to use it as global var.
 acc_cache = {}
 headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward',
-                        'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits',
+                        'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits', 'l5-bits',
                         'prob_2bits','prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_8bits']
 
 network_name = "svhn"
 number_of_layers = 8
-file_name = "releq_svhn_learning_history_log.csv"
+file_name = "svhn_ihreward_learning_history_log.csv"
 layer_info = StringIO("""layer_idx_norm;n;c;k;std
 1;32;3;3;0.18325
 2;32;32;3;0.04787
