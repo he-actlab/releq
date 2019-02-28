@@ -290,7 +290,7 @@ class RLQuantization:
         self.num_layers = num_layers # number of layers in the NN that needs to be Optimized
         self.n_act_p_episode     = 1  # number of actions per each episod (fix for now)
         #self.total_episodes        = num_episodes  # total number of observations used for training (in order)
-        self.total_episodes = 3000
+        self.total_episodes = 2500
         self.network_name   = network_name  # defines the network name
 
         #self.supported_bit_widths = self.yaml_config["supported_bitwidths"] #[2, 3, 4, 5, 8] #[2, 3, 4, 5, 8]
@@ -547,6 +547,7 @@ class RLQuantization:
             #reward = 2*(reward * acc_discount - 0.5)
             reward = (reward * acc_discount)
         '''
+        '''
         levels=100
         ylim = 1.00
         min_quant=self.min_bitwidth/self.max_bitwidth
@@ -574,8 +575,14 @@ class RLQuantization:
         x = int(self.quant_state*levels) - 1 
         y =  int(acc_state*levels) - 1
         #print(x, y, self.quant_state, acc_state)
-        reward = 0.8*z[x][y] + 0.2*len(set(bitwidth_layers))/len(bitwidth_layers)
-        return reward*10
+        reward = z[x][y]
+        #reward = 0.8*z[x][y] + 0.2*len(set(bitwidth_layers))/len(bitwidth_layers)
+        '''
+        if self.quant_state >= 0.3 and self.quant_state <= 0.5:
+            reward = 5
+        else:
+            reward = 0
+        return reward
     
     def calculate_imaginary_accuracy(self):
         y_min = 0.0 #Min Accuracy State
@@ -624,7 +631,8 @@ class RLQuantization:
             for i in range(self.total_episodes):
                 bitwidth_layers = [8 for i in range(self.num_layers)]
                 self.update_quant_state(bitwidth_layers)
-                print(bcolors.OKGREEN + "# Running epidode %d..." % (i) + bcolors.ENDC)
+                if i%100 == 0:
+                    print(bcolors.OKGREEN + "# Running epidode %d..." % (i) + bcolors.ENDC)
                 s_history  = []
                 a_history  = []
                 rewards  = []
@@ -637,14 +645,16 @@ class RLQuantization:
 
                     writer = tf.summary.FileWriter('./log/train', tf.get_default_session().graph)
 
-                    print(bcolors.OKGREEN + "# Running action for layer %d..." % (layer_num) + bcolors.ENDC)
+                    if i%100 == 0:
+                        print(bcolors.OKGREEN + "# Running action for layer %d..." % (layer_num) + bcolors.ENDC)
 
                     #if layer_num == 1:
                     #    self.Policy.rnn_state_in = self.Policy.rnn_initial_state_in
 
                     #print("State ", s)
                     act_index, v_pred = self.Policy.act(obs=[s], stochastic=True)
-                    print("Action Probabilities ", self.Policy.get_action_prob(obs=[s]))
+                    if i%100 == 0:
+                        print("Action Probabilities ", self.Policy.get_action_prob(obs=[s]))
                     l1w, l2w, l3w = self.Policy.get_policy_weights()
                     if np.isnan(l1w).any():
                         print("L1W ", l1w)
@@ -667,7 +677,8 @@ class RLQuantization:
 
                     #Calculate Reward
                     bitwidth_layers[layer_num] = new_bitwidth
-                    print("Bitwidth layers ",  bitwidth_layers)
+                    if i%100 == 0:
+                        print("Bitwidth layers ",  bitwidth_layers)
                     self.update_yaml_file(bitwidth_layers)
                     self.update_quant_state(bitwidth_layers)
                     if (layer_num+1) % num_layers_together == 0 or layer_num == self.num_layers-1:
@@ -679,7 +690,8 @@ class RLQuantization:
                         #Use new reward function
                         #reward = self.calculate_network_reward(cur_accuracy, self.fp_accuracy, bitwidth_layers)
                         reward = self.calculate_reward_shaping(cur_accuracy, bitwidth_layers)
-                        print("Reward is ", reward)
+                        if i%100 == 0:
+                            print("Reward is ", reward)
                     else:
                         cur_accuracy = 0
                         reward = 0
@@ -735,9 +747,10 @@ class RLQuantization:
                         a_history  = []
                         rewards  = []
                         v_preds = []
-                
-                    print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
-                    print("Accuracy with new bit_widths is ", cur_accuracy)
+
+                    if i%100 == 0:
+                        print("End of Episode ", i,", quantized bitwidths ", bitwidth_layers, " Quant_State ", self.quant_state)
+                        print("Accuracy with new bit_widths is ", cur_accuracy)
 
 
 def write_to_csv(step_data):
@@ -751,18 +764,14 @@ headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward',
                         'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits', 'l5-bits',
                         'prob_2bits','prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_8bits']
 
-network_name = "svhn"
-number_of_layers = 8
-file_name = "svhn_ihreward_learning_history_log.csv"
+network_name = "lenet"
+number_of_layers = 4
+file_name = "releq_lenet_learning_history_log.csv"
 layer_info = StringIO("""layer_idx_norm;n;c;k;std
-1;32;3;3;0.18325
-2;32;32;3;0.04787
-3;64;32;3;0.04403
-4;64;64;3;0.03448
-5;128;64;3;0.03441
-6;128;128;3;0.02876
-7;256;128;3;0.02559
-8;10;256;0;0.09887""")
+1;20;1;5;0.18183
+2;50;20;5;0.03791
+3;500;800;0;0.02124
+4;10;500;0;0.06587""")
 with open(file_name, 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerow(headers)
@@ -778,10 +787,10 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'c'] = (layer_state_info.loc[layer, 'c'] - min_c)/(max_c - min_c)
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
-layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
-training_cmd = "python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress svhn_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume svhn.pth.tar"
-yaml_file = "svhn_bn_wrpn.yaml"
-accuracy_cache_file = "svhn_accuracy_cache.txt"
-quant_type = "wrpn_quantizer"
-rl_quant = RLQuantization(number_of_layers, 97, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+layer_names = ["conv1", "conv2", "fc1", "fc2"]
+training_cmd = "python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_dorefa.yaml --epochs 5 --lr 0.001 --resume ./lenet_mnist.pth.tar"
+yaml_file = "lenet_bn_dorefa.yaml"
+accuracy_cache_file = "lenet_accuracy_cache.txt"
+quant_type = "dorefa_quantizer"
+rl_quant = RLQuantization(number_of_layers, 99.8, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
