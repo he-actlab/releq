@@ -755,15 +755,14 @@ headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward',
                         'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits',
                         'prob_2bits','prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_8bits']
 
-network_name = "cifar10"
-file_name = "releq_cifar10_learning_history_log.csv"
-number_of_layers = 5 #cifar
-layer_info = StringIO("""layer_idx_norm;n;c;k;std;c_out
-1;6;3;5;0.23009;6
-2;16;6;5;0.11020;400
-3;120;400;0;0.04013;120
-4;84;120;0;0.06537;84
-5;10;84;0;0.14734;1""")
+network_name = "lenet"
+number_of_layers = 4
+file_name = "lenet_learning_history_log.csv"
+layer_info = StringIO("""layer_idx_norm;n;c;k;std
+1;20;1;5;0.18183
+2;50;20;5;0.03791
+3;500;800;0;0.02124
+4;10;500;0;0.06587""")
 with open(file_name, 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerow(headers)
@@ -779,10 +778,10 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'c'] = (layer_state_info.loc[layer, 'c'] - min_c)/(max_c - min_c)
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
-layer_names = ["conv1", "conv2", "fc1", "fc2", "fc3"]
-training_cmd = "python3 compress_classifier.py --arch simplenet_cifar ../../../data.cifar --quantize-eval --compress cifar_bn_wrpn.yaml --epochs 10 --lr 0.001 --resume ./simplenet_cifar.pth.tar"
-yaml_file = "cifar_bn_wrpn.yaml"
-accuracy_cache_file = "cifar_accuracy_cache.txt"
-quant_type = "wrpn_quantizer"
-rl_quant = RLQuantization(number_of_layers, 75, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+layer_names = ["conv1", "conv2", "fc1", "fc2"]
+training_cmd = "python3 compress_classifier.py --arch lenet_mnist ../../../data.mnist --quantize-eval --compress ./lenet_bn_dorefa.yaml --epochs 5 --lr 0.001 --resume ./lenet_mnist.pth.tar"
+yaml_file = "lenet_bn_dorefa.yaml"
+accuracy_cache_file = "lenet_accuracy_cache.txt"
+quant_type = "dorefa_quantizer"
+rl_quant = RLQuantization(number_of_layers, 99.8, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
