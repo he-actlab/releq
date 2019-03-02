@@ -16,6 +16,11 @@ Usage:
 
 * supported networks: {lenet, cifar, svhn}
 
+Running reward per network:
+-----------------------------------
+1. Based on which network you want to run, copy the network info from layer_info.py and paste it at the end of ppo_all_layers.py
+2. After that just run "python3 ppo_all_layers.py"
+
 Requirements:
 ---------------------------------
 - Python3
