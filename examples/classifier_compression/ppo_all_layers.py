@@ -754,18 +754,31 @@ acc_cache = {}
 headers = ['episode_num', 'layer_num', 'quant_state', 'acc_state', 'reward',
                         'l1-bits', 'l2-bits', 'l3-bits', 'l4-bits',
                         'prob_2bits','prob_3bits', 'prob_4bits', 'prob_5bits', 'prob_8bits']
-network_name = "svhn"
-number_of_layers = 8
-file_name = "releq_svhn_learning_history_log.csv"
+network_name = "resnet-20"
+number_of_layers = 20
+file_name = "releq_resnet20_learning_history_log.csv"
 layer_info = StringIO("""layer_idx_norm;n;c;k;std
-1;32;3;3;0.18325
-2;32;32;3;0.04787
-3;64;32;3;0.04403
-4;64;64;3;0.03448
-5;128;64;3;0.03441
-6;128;128;3;0.02876
-7;256;128;3;0.02559
-8;10;256;0;0.09887""")
+2;16;16;3;0.13231
+3;16;16;3;0.12662
+4;16;16;3;0.12674
+5;16;16;3;0.12042
+6;16;16;3;0.12214
+7;16;16;3;0.11869
+8;32;16;3;0.09128
+9;32;32;3;0.08443
+10;32;16;1;0.23298
+11;32;32;3;0.08471
+12;32;32;3;0.08416
+13;32;32;3;0.08387
+14;32;32;3;0.08293
+15;64;32;3;0.06192
+16;64;64;3;0.06001
+17;64;32;1;0.16850
+18;64;64;3;0.06001
+19;64;64;3;0.05707
+20;64;64;3;0.05611
+21;64;64;3;0.05470
+""")
 with open(file_name, 'w') as writeFile:
     writer = csv.writer(writeFile)
     writer.writerow(headers)
@@ -781,10 +794,10 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'c'] = (layer_state_info.loc[layer, 'c'] - min_c)/(max_c - min_c)
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
-layer_names = ["features.0", "features.3", "features.7", "features.10", "features.14", "features.17", "features.21", "classifier.0"]
-training_cmd = "python3 compress_classifier.py --arch svhn ../../../data.svhn --quantize-eval --compress svhn_bn_wrpn.yaml --epochs 5 --lr 0.01 --resume svhn.pth.tar"
-yaml_file = "svhn_bn_wrpn.yaml"
-accuracy_cache_file = "svhn_accuracy_cache.txt"
-quant_type = "wrpn_quantizer"
-rl_quant = RLQuantization(number_of_layers, 97, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+layer_names = ["layer1.0.conv1", "layer1.0.conv2", "layer1.1.conv1", "layer1.1.conv2", "layer1.2.conv1", "layer1.2.conv2", "layer2.0.conv1", "layer2.0.conv2", "layer2.0.downsample.0", "layer2.1.conv1", "layer2.1.conv2", "layer2.2.conv1", "layer2.2.conv2", "layer3.0.conv1", "layer3.0.conv2", "layer3.0.downsample.0", "layer3.1.conv1", "layer3.1.conv2", "layer3.2.conv1", "layer3.2.conv2"]
+training_cmd = "python3 compress_classifier.py --arch resnet20_cifar ../../../data.cifar --epochs 10 --lr 0.001 --resume resnet.pth.tar --compress resnet_bn_dorefa.yaml"
+yaml_file = "resnet_bn_dorefa.yaml"
+accuracy_cache_file = "resnet20_accuracy_cache.txt"
+quant_type = "dorefa_quantizer"
+rl_quant = RLQuantization(number_of_layers, 93, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
