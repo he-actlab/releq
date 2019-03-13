@@ -1,0 +1,108 @@
+lr_schedulers:
+  training_lr:
+    class: MultiStepLR
+    gamma: 0.2
+    milestones:
+    - 60
+    - 75
+policies:
+- ending_epoch: 200
+  frequency: 1
+  quantizer:
+    instance_name: wrpn_quantizer
+  starting_epoch: 0
+- ending_epoch: 200
+  frequency: 1
+  lr_scheduler:
+    instance_name: training_lr
+  starting_epoch: 0
+quantizers:
+  wrpn_quantizer:
+    bits_activations: null
+    bits_overrides:
+      fc:
+        acts: null
+        wts: 3
+      model.0.0:
+        acts: null
+        wts: 5
+      model.1.0:
+        acts: null
+        wts: 4
+      model.1.3:
+        acts: null
+        wts: 6
+      model.10.0:
+        acts: null
+        wts: 6
+      model.10.3:
+        acts: null
+        wts: 5
+      model.11.0:
+        acts: null
+        wts: 3
+      model.11.3:
+        acts: null
+        wts: 8
+      model.12.0:
+        acts: null
+        wts: 6
+      model.12.3:
+        acts: null
+        wts: 7
+      model.13.0:
+        acts: null
+        wts: 7
+      model.13.3:
+        acts: null
+        wts: 8
+      model.2.0:
+        acts: null
+        wts: 3
+      model.2.3:
+        acts: null
+        wts: 6
+      model.3.0:
+        acts: null
+        wts: 6
+      model.3.3:
+        acts: null
+        wts: 5
+      model.4.0:
+        acts: null
+        wts: 4
+      model.4.3:
+        acts: null
+        wts: 4
+      model.5.0:
+        acts: null
+        wts: 3
+      model.5.3:
+        acts: null
+        wts: 8
+      model.6.0:
+        acts: null
+        wts: 8
+      model.6.3:
+        acts: null
+        wts: 5
+      model.7.0:
+        acts: null
+        wts: 5
+      model.7.3:
+        acts: null
+        wts: 4
+      model.8.0:
+        acts: null
+        wts: 3
+      model.8.3:
+        acts: null
+        wts: 4
+      model.9.0:
+        acts: null
+        wts: 7
+      model.9.3:
+        acts: null
+        wts: 7
+    bits_weights: 4
+    class: WRPNQuantizer
