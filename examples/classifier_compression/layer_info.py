@@ -172,11 +172,11 @@ for layer in range(number_of_layers):
     layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
 print(layer_state_info)
 layer_names = ["features.3", "features.6", "features.8", "features.10", "classifier.1", "classifier.4"]
-training_cmd = "python3 compress_classifier.py --arch alexnet ../../../data.imagenet_100 --epochs 2 --resume alexnet.pth.tar --lr 0.001 --quantize-eval --compress alexnet_bn_dorefa.yaml"
-yaml_file = "alexnet_bn_dorefa.yaml"
+training_cmd = "python3 compress_classifier.py --arch alexnet ../../../data.imagenet_100 --epochs 2 --resume alexnet.pth.tar --lr 0.001 --quantize-eval --compress alexnet_bn_wrpn.yaml"
+yaml_file = "alexnet_bn_wrpn.yaml"
 accuracy_cache_file = "alexnet_accuracy_cache.txt"
-quant_type = "dorefa_quantizer"
-rl_quant = RLQuantization(number_of_layers, 82.78, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+quant_type = "wrpn_quantizer"
+rl_quant = RLQuantization(number_of_layers, 65, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
 #-------------------------------------------------------------------------------------------
 network_name = "vgg11"
