@@ -214,3 +214,56 @@ quant_type = "wrpn_quantizer"
 rl_quant = RLQuantization(number_of_layers, 96, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
 rl_quant.quantize_layers_together(number_of_layers)
 #-------------------------------------------------------------------------------------------
+network_name = "mobilenet"
+number_of_layers = 28
+file_name = "releq_mobilenet_learning_history_log.csv"
+layer_info = StringIO("""layer_idx_norm;n;c;k;std
+1;32;3;3;0.16152
+2;32;1;3;0.35671
+3;64;32;1;0.13311
+4;64;1;3;0.17684
+5;128;64;1;0.09432
+6;128;1;3;0.18791
+7;128;128;1;0.07951
+8;128;1;3;0.11473
+9;256;128;1;0.06354
+10;256;1;3;0.13977
+11;256;256;1;0.05068
+12;256;1;3;0.09045
+13;512;256;1;0.04042
+14;512;1;3;0.12283
+15;512;512;1;0.03353
+16;512;1;3;0.09269
+17;512;512;1;0.03230
+18;512;1;3;0.08519
+19;512;512;1;0.03307
+20;512;1;3;0.07989
+21;512;512;1;0.03501
+22;512;1;3;0.06508
+23;512;512;1;0.03678
+24;512;1;3;0.05652
+25;1024;512;1;0.02817
+26;1024;1;3;0.02874
+27;1024;1024;1;0.02032
+28;1000;1024;0;0.05217
+""")
+layer_state_info = pandas.read_csv(layer_info, sep=";")
+min_n = min(layer_state_info.loc[:, 'n'])
+max_n = max(layer_state_info.loc[:, 'n'])
+min_c = min(layer_state_info.loc[:, 'c'])
+max_c = max(layer_state_info.loc[:, 'c'])
+min_k = min(layer_state_info.loc[:, 'k'])
+max_k = max(layer_state_info.loc[:, 'k'])
+for layer in range(number_of_layers):
+    layer_state_info.loc[layer, 'n'] = (layer_state_info.loc[layer, 'n'] - min_n)/(max_n - min_n)
+    layer_state_info.loc[layer, 'c'] = (layer_state_info.loc[layer, 'c'] - min_c)/(max_c - min_c)
+    layer_state_info.loc[layer, 'k'] = (layer_state_info.loc[layer, 'k'] - min_k)/(max_k - min_k)
+print(layer_state_info)
+layer_names = ["model.0.0", "model.1.0", "model.1.3", "model.2.0", "model.2.3","model.3.0","model.3.3","model.4.0","model.4.3","model.5.0","model.5.3","model.6.0","model.6.3","model.7.0","model.7.3","model.8.0","model.8.3","model.9.0","model.9.3","model.10.0","model.10.3","model.11.0", "model.11.3", "model.12.0", "model.12.3", "model.13.0", "model.13.3", "fc"]
+training_cmd = "python3 compress_classifier.py --arch mobilenet ../../../data.imagenet_100 -p 30 -j=4 --resume ./mobilenet.pth.tar --quantize-eval --compress mobilenet_bn_wrpn.yaml --epochs 1 --lr 0.01"
+yaml_file = "mobilenet_bn_wrpn.yaml"
+accuracy_cache_file = "mobilenet_accuracy_cache.txt"
+quant_type = "wrpn_quantizer"
+rl_quant = RLQuantization(number_of_layers, 70, network_name, layer_names, layer_state_info, training_cmd, yaml_file, quant_type) #num_layers, accuracy, network_name, layer_names, layer_stats
+rl_quant.quantize_layers_together(number_of_layers)
+#-------------------------------------------------------------------------------------------
