@@ -24,6 +24,7 @@ Code based on the AlexNet PyTorch sample, with the required changes.
 
 import math
 import torch.nn as nn
+import itertools
 
 __all__ = ['AlexNetBN', 'alexnet_bn']
 
@@ -77,11 +78,34 @@ class AlexNetBN(nn.Module):
                 m.bias.data.zero_()
 
     def forward(self, x):
-        x = self.features(x)
+        #print(self.features)
+        for i in range(len(self.features.module)):
+            x = self.features.module[i](x)
+            if i == 5:
+                self.act_conv2 = x
+        #self.act_conv2 = self.features.module[0:6](x)
+        #x = self.features(x)
         x = x.view(x.size(0), 256 * 6 * 6)
         x = self.classifier(x)
         return x
 
+    def freeze(self):
+        child_counter = 0
+        for child in itertools.chain(self.features.module, self.classifier):
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+    
+    def freeze_partial(self, layer_list):
+        child_counter = 0
+        for child in itertools.chain(self.features.module, self.classifier):
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
 
 def alexnet_bn(**kwargs):
     r"""AlexNet model with batch-norm layers.

@@ -9,7 +9,7 @@ policies:
 - ending_epoch: 200
   frequency: 1
   quantizer:
-    instance_name: wrpn_quantizer
+    instance_name: dorefa_quantizer
   starting_epoch: 0
 - ending_epoch: 200
   frequency: 1
@@ -17,26 +17,32 @@ policies:
     instance_name: training_lr
   starting_epoch: 0
 quantizers:
-  wrpn_quantizer:
+  dorefa_quantizer:
     bits_activations: null
     bits_overrides:
-      classifier.1:
+      features.0:
         acts: null
-        wts: 8
-      classifier.4:
+        wts: 2
+      features.2:
         acts: null
-        wts: 8
-      features.10:
-        acts: null
-        wts: 8
-      features.3:
-        acts: null
-        wts: 8
+        wts: 2
       features.6:
         acts: null
         wts: 8
       features.8:
         acts: null
         wts: 8
+      features.10:
+        acts: null
+        wts: 8
+      classifier.1:
+        acts: null
+        wts: 8
+      classifier.4:
+        acts: null
+        wts: 8
+      classifier.6:
+        acts: null
+        wts: 8
     bits_weights: 8
-    class: WRPNQuantizer
+    class: DorefaQuantizer
