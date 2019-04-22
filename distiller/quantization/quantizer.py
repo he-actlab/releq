@@ -95,8 +95,8 @@ class Quantizer(object):
                  quantize_bias=False, train_with_fp_copy=False):
         if not isinstance(bits_overrides, OrderedDict):
             raise TypeError('bits_overrides must be an instance of collections.OrderedDict')
-        if train_with_fp_copy and optimizer is None:
-            raise ValueError('optimizer cannot be None when train_with_fp_copy is True')
+        #if train_with_fp_copy and optimizer is None:
+        #    raise ValueError('optimizer cannot be None when train_with_fp_copy is True')
 
         self.default_qbits = QBits(acts=bits_activations, wts=bits_weights)
         self.quantize_bias = quantize_bias
@@ -230,8 +230,9 @@ class Quantizer(object):
         :return: List of parameter groups
         """
         # Default implementation - just return all model parameters as one group
-        return [{'params': self.model.parameters()}]
-
+        #return [{'params': self.model.parameters()}]
+        return [{'params': filter(lambda p: p.requires_grad, self.model.parameters())}]
+    
     def quantize_params(self):
         """
         Quantize all parameters using self.param_quantization_fn (with the defined number of bits for each parameter)

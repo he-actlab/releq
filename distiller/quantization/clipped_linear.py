@@ -145,7 +145,7 @@ class DorefaQuantizer(Quantizer):
         1. Gradients quantization not supported yet
         2. The paper defines special handling for 1-bit weights which isn't supported here yet
     """
-    def __init__(self, model, optimizer, bits_activations=32, bits_weights=32, bits_overrides=OrderedDict(),
+    def __init__(self, model, optimizer=None, bits_activations=32, bits_weights=32, bits_overrides=OrderedDict(),
                  quantize_bias=False):
         super(DorefaQuantizer, self).__init__(model, optimizer=optimizer, bits_activations=bits_activations,
                                               bits_weights=bits_weights, bits_overrides=bits_overrides,
