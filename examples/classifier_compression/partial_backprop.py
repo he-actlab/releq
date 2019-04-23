@@ -510,7 +510,7 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
 
         if args.kd_policy is None:
             torch.set_printoptions(precision=10)
-            model.freeze_partial([0, 2])
+            model.freeze_partial([0, 2, 6])
             output = model(inputs)
             #new_tensor = model.module.act_conv2
             #print(model)

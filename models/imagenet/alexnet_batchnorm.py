@@ -81,7 +81,7 @@ class AlexNetBN(nn.Module):
         #print(self.features)
         for i in range(len(self.features.module)):
             x = self.features.module[i](x)
-            if i == 5:
+            if i == 9:
                 self.act_conv2 = x
         #self.act_conv2 = self.features.module[0:6](x)
         #x = self.features(x)
