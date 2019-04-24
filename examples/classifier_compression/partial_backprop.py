@@ -510,7 +510,7 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
 
         if args.kd_policy is None:
             torch.set_printoptions(precision=10)
-            model.freeze_partial([0, 2, 6])
+            model.freeze_partial([20, 23])
             output = model(inputs)
             #new_tensor = model.module.act_conv2
             #print(model)
@@ -533,11 +533,11 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
         else:
             output = args.kd_policy.forward(inputs)
         if not args.earlyexit_lossweights:
-            #loss = criterion(output, target)
+            loss = criterion(output, target)
             new_criterion = nn.PoissonNLLLoss() #nn.L1Loss() #torch.nn.KLDivLoss() #torch.nn.MSELoss(size_average = False) 
             old_tensor = torch.nn.functional.log_softmax(old_tensor)
             new_tensor = torch.nn.functional.softmax(new_tensor)
-            loss = new_criterion(new_tensor, old_tensor)
+            #loss = new_criterion(new_tensor, old_tensor)
             #loss = torch.sum(new_tensor - old_tensor)
             #print('loss >>>>>> ', loss)
             # Measure accuracy and record loss

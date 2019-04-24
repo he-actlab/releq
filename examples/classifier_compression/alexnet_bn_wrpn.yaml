@@ -31,18 +31,18 @@ quantizers:
         wts: 2
       features.10:
         acts: null
-        wts: 8
+        wts: 2
       features.13:
         acts: null
-        wts: 8
-      classifier.1:
+        wts: 2
+      classifier.0:
         acts: null
-        wts: 8
-      classifier.4:
+        wts: 2
+      classifier.3:
         acts: null
-        wts: 8
+        wts: 2
       classifier.6:
         acts: null
-        wts: 8
+        wts: 2
     bits_weights: 8
     class: DorefaQuantizer
