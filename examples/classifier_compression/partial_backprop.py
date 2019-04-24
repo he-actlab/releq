@@ -348,7 +348,7 @@ def main():
             model, chkpt_file=args.resume)
         model.cuda()
         original_model, compression_scheduler, start_epoch = apputils.load_checkpoint(
-            original_model, chkpt_file=args.resume)
+            original_model, chkpt_file=args.fpresume)
         original_model.cuda()
 
     # Define loss function (criterion) and optimizer
