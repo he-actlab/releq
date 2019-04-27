@@ -537,8 +537,8 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
         if not args.earlyexit_lossweights:
             #loss = criterion(output, target)
             new_criterion = nn.PoissonNLLLoss() #nn.L1Loss() #torch.nn.KLDivLoss() #torch.nn.MSELoss(size_average = False) 
-            old_tensor = torch.nn.functional.log_softmax(old_tensor/20)
-            new_tensor = torch.nn.functional.softmax(new_tensor/20)
+            old_tensor = torch.nn.functional.log_softmax(old_tensor/4)
+            new_tensor = torch.nn.functional.softmax(new_tensor/4)
             loss = new_criterion(new_tensor, old_tensor)
             #loss = torch.sum(new_tensor - old_tensor)
             #print('loss >>>>>> ', loss)
