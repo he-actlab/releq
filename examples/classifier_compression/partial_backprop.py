@@ -344,12 +344,12 @@ def main():
 
     # We can optionally resume from a checkpoint
     if args.resume:
-        model, compression_scheduler, start_epoch = apputils.load_checkpoint(
-            model, chkpt_file=args.resume)
-        model.cuda()
         original_model, compression_scheduler, start_epoch = apputils.load_checkpoint(
             original_model, chkpt_file=args.fpresume)
         original_model.cuda()
+        model, compression_scheduler, start_epoch = apputils.load_checkpoint(
+            model, chkpt_file=args.resume)
+        model.cuda()
 
     # Define loss function (criterion) and optimizer
     criterion = nn.CrossEntropyLoss().cuda()
@@ -392,7 +392,7 @@ def main():
         print(original_model)
         # Model is re-transferred to GPU in case parameters were added (e.g. PACTQuantizer)
         model.cuda()
-        original_model.cuda()
+        #original_model.cuda()
     elif compression_scheduler is None:
         compression_scheduler = distiller.CompressionScheduler(model)
 
@@ -524,7 +524,8 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
             #model.module.fc2.weight.requires_grad = False
             #original_model.module.freeze()
             original_model.freeze()
-            output_new = original_model(inputs)
+            output_new = original_model.original_forward(inputs)
+            #output_new = original_model(inputs)
             #old_tensor = original_model.module.act_conv2
             old_tensor = original_model.act_conv2
             #print(torch.sum(model.module.fc3.weight), torch.sum(model.module.fc2.weight),  torch.sum(model.module.fc1.weight), torch.sum(model.module.conv2.weight),  torch.sum(model.module.conv1.weight))
@@ -537,8 +538,8 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
         if not args.earlyexit_lossweights:
             #loss = criterion(output, target)
             new_criterion = nn.PoissonNLLLoss() #nn.L1Loss() #torch.nn.KLDivLoss() #torch.nn.MSELoss(size_average = False) 
-            old_tensor = torch.nn.functional.log_softmax(old_tensor/4)
-            new_tensor = torch.nn.functional.softmax(new_tensor/4)
+            old_tensor = torch.nn.functional.log_softmax(old_tensor)
+            new_tensor = torch.nn.functional.softmax(new_tensor)
             loss = new_criterion(new_tensor, old_tensor)
             #loss = torch.sum(new_tensor - old_tensor)
             #print('loss >>>>>> ', loss)

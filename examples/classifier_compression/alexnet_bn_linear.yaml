@@ -1,0 +1,51 @@
+lr_schedulers:
+  training_lr:
+    class: MultiStepLR
+    gamma: 0.2
+    milestones:
+    - 60
+    - 75
+policies:
+- ending_epoch: 200
+  frequency: 1
+  quantizer:
+    instance_name: linear_quantizer
+  starting_epoch: 0
+- ending_epoch: 200
+  frequency: 1
+  lr_scheduler:
+    instance_name: training_lr
+  starting_epoch: 0
+quantizers:
+  linear_quantizer:
+    bits_activations: 8
+    mode: 'ASYMMETRIC_UNSIGNED'  # Can try "SYMMETRIC" as well
+    ema_decay: 0.999   # Decay value for exponential moving average tracking of activation ranges
+    per_channel_wts: True
+    bits_overrides:
+      features.0:
+        acts: null
+        wts: 2
+      features.2:
+        acts: null
+        wts: 2
+      features.6:
+        acts: null
+        wts: 8
+      features.10:
+        acts: null
+        wts: 8
+      features.13:
+        acts: null
+        wts: 8
+      classifier.0:
+        acts: null
+        wts: 8
+      classifier.3:
+        acts: null
+        wts: 8
+      classifier.6:
+        acts: null
+        wts: 8
+    bits_weights: 8
+    class: QuantAwareTrainRangeLinearQuantizer

@@ -45,4 +45,4 @@ quantizers:
         acts: null
         wts: 8
     bits_weights: 8
-    class: DorefaQuantizer
+    class: QuantAwareTrainRangeLinearQuantizer
