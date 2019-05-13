@@ -19,7 +19,7 @@ policies:
 quantizers:
   linear_quantizer:
     bits_activations: 8
-    mode: 'ASYMMETRIC_SIGNED'  # Can try "SYMMETRIC" as well
+    mode: 'SYMMETRIC'  # Can try "SYMMETRIC" as well
     ema_decay: 0.999   # Decay value for exponential moving average tracking of activation ranges
     per_channel_wts: True
     bits_overrides:
