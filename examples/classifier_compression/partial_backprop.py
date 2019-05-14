@@ -81,7 +81,6 @@ import distiller.quantization as quantization
 from models import ALL_MODEL_NAMES, create_model
 from copy import deepcopy
 
-
 # Logger handle
 msglogger = None
 
@@ -512,7 +511,8 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
 
         if args.kd_policy is None:
             torch.set_printoptions(precision=10)
-            model.freeze_partial([0, 2])
+            model.freeze_partial([2, 6])
+            #model.module.freeze_partial([2, 3])
             output = model(inputs)
             #new_tensor = model.module.act_conv2
             #print(model)
@@ -525,6 +525,7 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
             #original_model.module.freeze()
             original_model.freeze()
             output_new = original_model.original_forward(inputs)
+            #output_new = original_model.module.original_forward(inputs)
             #output_new = original_model(inputs)
             #old_tensor = original_model.module.act_conv2
             old_tensor = original_model.act_conv2
