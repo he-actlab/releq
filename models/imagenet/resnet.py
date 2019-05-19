@@ -21,6 +21,7 @@
 import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
+import itertools
 
 
 __all__ = ['ResNet', 'resnet18', 'resnet34', 'resnet50', 'resnet101',
@@ -164,7 +165,11 @@ class ResNet(nn.Module):
         x = self.relu(x)
         x = self.maxpool(x)
 
-        x = self.layer1(x)
+        #x = self.layer1(x)
+        for i in range(len(self.layer1)):
+            x = self.layer1[i](x)
+            if i == 0:
+                self.act_conv2 = x
         x = self.layer2(x)
         x = self.layer3(x)
         x = self.layer4(x)
@@ -174,6 +179,48 @@ class ResNet(nn.Module):
         x = self.fc(x)
 
         return x
+    
+    def freeze(self):
+        child_counter = 0
+        for child in [self.conv1, self.bn1, self.relu, self.maxpool]:
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+        for child in itertools.chain(self.layer1, self.layer2, self.layer3, self.layer4):
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+        for child in [self.avgpool, self.fc]:
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+    
+    def freeze_partial(self, layer_list):
+        child_counter = 0
+        for child in [self.conv1, self.bn1, self.relu, self.maxpool]:
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
+        for child in itertools.chain(self.layer1, self.layer2, self.layer3, self.layer4):
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
+        for child in [self.avgpool, self.fc]:
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
 
 
 def resnet18(pretrained=False, **kwargs):

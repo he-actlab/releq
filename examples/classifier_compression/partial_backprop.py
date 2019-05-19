@@ -80,9 +80,12 @@ from distiller.data_loggers import *
 import distiller.quantization as quantization
 from models import ALL_MODEL_NAMES, create_model
 from copy import deepcopy
+import csv
 
 # Logger handle
 msglogger = None
+
+#csvlogger = csv.writer(open("vgg11_stage1_L1loss.csv", 'w'))
 
 
 def float_range(val_str):
@@ -343,11 +346,11 @@ def main():
 
     # We can optionally resume from a checkpoint
     if args.resume:
+        model, compression_scheduler, start_epoch = apputils.load_checkpoint(
+            model, chkpt_file=args.resume)
         original_model, compression_scheduler, start_epoch = apputils.load_checkpoint(
             original_model, chkpt_file=args.fpresume)
         original_model.cuda()
-        model, compression_scheduler, start_epoch = apputils.load_checkpoint(
-            model, chkpt_file=args.resume)
         model.cuda()
 
     # Define loss function (criterion) and optimizer
@@ -511,22 +514,23 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
 
         if args.kd_policy is None:
             torch.set_printoptions(precision=10)
-            model.freeze_partial([2, 6])
-            #model.module.freeze_partial([2, 3])
+            model.freeze_partial([0, 5])
+            #model.module.freeze_partial([0, 3])
+            #print("Quantized")
             output = model(inputs)
             #new_tensor = model.module.act_conv2
             #print(model)
             new_tensor = model.act_conv2
             #print(new_tensor)
-            #print("--------------aaaaaaaaaaa-----------------")
             #model.module.freeze()
             #model.module.fc1.weight.requires_grad = False
             #model.module.fc2.weight.requires_grad = False
             #original_model.module.freeze()
             original_model.freeze()
-            output_new = original_model.original_forward(inputs)
+            #output_new = original_model.original_forward(inputs)
             #output_new = original_model.module.original_forward(inputs)
-            #output_new = original_model(inputs)
+            #print("Original")
+            output_new = original_model(inputs)
             #old_tensor = original_model.module.act_conv2
             old_tensor = original_model.act_conv2
             #print(torch.sum(model.module.fc3.weight), torch.sum(model.module.fc2.weight),  torch.sum(model.module.fc1.weight), torch.sum(model.module.conv2.weight),  torch.sum(model.module.conv1.weight))
@@ -579,6 +583,7 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
             errs = OrderedDict()
             if not args.earlyexit_lossweights:
                 errs['Top1'] = classerr.value(1)
+                #csvlogger.writerow([epoch, steps_completed, classerr.value(1), loss])
                 errs['Top5'] = classerr.value(5)
             else:
                 # for Early Exit case, the Top1 and Top5 stats are computed for each exit.

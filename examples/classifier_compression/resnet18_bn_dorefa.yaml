@@ -1,0 +1,85 @@
+lr_schedulers:
+  training_lr:
+    class: MultiStepLR
+    gamma: 0.2
+    milestones:
+    - 60
+    - 75
+policies:
+- ending_epoch: 200
+  frequency: 1
+  quantizer:
+    instance_name: dorefa_quantizer
+  starting_epoch: 0
+- ending_epoch: 200
+  frequency: 1
+  lr_scheduler:
+    instance_name: training_lr
+  starting_epoch: 0
+quantizers:
+  dorefa_quantizer:
+    bits_activations: null
+    bits_overrides:
+      conv1:
+        acts: null
+        wts: 2
+      layer1.0.conv1:
+        acts: null
+        wts: 2
+      layer1.0.conv2:
+        acts: null
+        wts: 2
+      layer1.1.conv1:
+        acts: null
+        wts: 8
+      layer1.1.conv2:
+        acts: null
+        wts: 8
+      layer2.0.conv1:
+        acts: null
+        wts: 8
+      layer2.0.conv2:
+        acts: null
+        wts: 8
+      layer2.0.downsample.0:
+        acts: null
+        wts: 8
+      layer2.1.conv1:
+        acts: null
+        wts: 8
+      layer2.1.conv2:
+        acts: null
+        wts: 8
+      layer3.0.conv1:
+        acts: null
+        wts: 8
+      layer3.0.conv2:
+        acts: null
+        wts: 8
+      layer3.0.downsample.0:
+        acts: null
+        wts: 8
+      layer3.1.conv1:
+        acts: null
+        wts: 8
+      layer3.1.conv2:
+        acts: null
+      layer4.0.conv1:
+        acts: null
+        wts: 8
+      layer4.0.conv2:
+        acts: null
+        wts: 8
+      layer4.0.downsample.0:
+        acts: null
+        wts: 8
+      layer4.1.conv1:
+        acts: null
+        wts: 8
+      layer4.1.conv2:
+        acts: null
+      fc:
+        acts: null
+        wts: 8
+    bits_weights: 8
+    class: DorefaQuantizer
