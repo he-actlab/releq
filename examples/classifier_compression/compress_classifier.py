@@ -79,10 +79,12 @@ import apputils
 from distiller.data_loggers import *
 import distiller.quantization as quantization
 from models import ALL_MODEL_NAMES, create_model
+import csv
 
 
 # Logger handle
 msglogger = None
+#csvlogger = csv.writer(open("vgg11_9_convential_stage1.csv", 'w'))
 
 
 def float_range(val_str):
@@ -90,7 +92,6 @@ def float_range(val_str):
     if val < 0 or val >= 1:
         raise argparse.ArgumentTypeError('Must be >= 0 and < 1 (received {0})'.format(val_str))
     return val
-
 
 parser = argparse.ArgumentParser(description='Distiller image classification model compression')
 parser.add_argument('data', metavar='DIR', help='path to dataset')
@@ -358,6 +359,7 @@ def main():
     if args.summary:
         return summarize_model(model, args.dataset, which_summary=args.summary)
 
+    print(model)
     # Load the datasets: the dataset to load is inferred from the model name passed
     # in args.arch.  The default dataset is ImageNet, but if args.arch contains the
     # substring "_cifar", then cifar10 is used.
@@ -500,8 +502,12 @@ def train(train_loader, model, criterion, optimizer, epoch,
             compression_scheduler.on_minibatch_begin(epoch, train_step, steps_per_epoch, optimizer)
 
         if args.kd_policy is None:
-            # Amir: Running
+            #model.module.freeze_partial([0, 3])
             output = model(inputs)
+            #print(torch.sum(model.module.features[5].weight))
+            #print(torch.sum(model.module.fc2.weight), torch.sum(model.module.fc1.weight), torch.sum(model.module.conv2.weight),  torch.sum(model.module.conv1.weight))
+            #print(torch.sum(model.module.fc3.weight), torch.sum(model.module.fc2.weight), torch.sum(model.module.fc1.weight), torch.sum(model.module.conv2.weight),  torch.sum(model.module.conv1.weight))
+
         else:
             output = args.kd_policy.forward(inputs)
         if not args.earlyexit_lossweights:
@@ -541,6 +547,7 @@ def train(train_loader, model, criterion, optimizer, epoch,
             errs = OrderedDict()
             if not args.earlyexit_lossweights:
                 errs['Top1'] = classerr.value(1)
+                #csvlogger.writerow([epoch, steps_completed, classerr.value(1)])
                 errs['Top5'] = classerr.value(5)
             else:
                 # for Early Exit case, the Top1 and Top5 stats are computed for each exit.
@@ -616,6 +623,8 @@ def _validate(data_loader, model, criterion, loggers, args, epoch=-1):
             inputs, target = inputs.to('cuda'), target.to('cuda')
             # compute output from model
             output = model(inputs)
+            #kernel = model.module.features[7].float_weight
+            #print(set(kernel.data.cpu().numpy().ravel()))
 
             if not args.earlyexit_thresholds:
                 # compute loss
