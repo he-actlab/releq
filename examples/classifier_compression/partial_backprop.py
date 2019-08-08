@@ -85,7 +85,7 @@ import csv
 # Logger handle
 msglogger = None
 
-#csvlogger = csv.writer(open("vgg11_stage1_L1loss.csv", 'w'))
+csvlogger = csv.writer(open("vgg11_single_stage_kd.csv", 'w'))
 
 
 def float_range(val_str):
@@ -514,13 +514,14 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
 
         if args.kd_policy is None:
             torch.set_printoptions(precision=10)
-            model.freeze_partial([0, 5])
+            #model.freeze_partial([0, 4])
             #model.module.freeze_partial([0, 3])
             #print("Quantized")
             output = model(inputs)
             #new_tensor = model.module.act_conv2
             #print(model)
-            new_tensor = model.act_conv2
+            #new_tensor = model.act_conv2
+            new_tensor = output
             #print(new_tensor)
             #model.module.freeze()
             #model.module.fc1.weight.requires_grad = False
@@ -532,7 +533,8 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
             #print("Original")
             output_new = original_model(inputs)
             #old_tensor = original_model.module.act_conv2
-            old_tensor = original_model.act_conv2
+            #old_tensor = original_model.act_conv2
+            old_tensor = output_new
             #print(torch.sum(model.module.fc3.weight), torch.sum(model.module.fc2.weight),  torch.sum(model.module.fc1.weight), torch.sum(model.module.conv2.weight),  torch.sum(model.module.conv1.weight))
             #print(torch.sum(original_model.module.fc2.weight), torch.sum(original_model.module.fc1.weight), torch.sum(original_model.module.conv2.weight),  torch.sum(original_model.module.conv1.weight))
             #print(set(model.module.conv2.weight.data.cpu().numpy().ravel()))
@@ -542,7 +544,7 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
             output = args.kd_policy.forward(inputs)
         if not args.earlyexit_lossweights:
             #loss = criterion(output, target)
-            new_criterion = nn.PoissonNLLLoss() #nn.L1Loss() #torch.nn.KLDivLoss() #torch.nn.MSELoss(size_average = False) 
+            new_criterion = nn.PoissonNLLLoss() #nn.PoissonNLLLoss() #nn.L1Loss() #torch.nn.KLDivLoss() #torch.nn.MSELoss(size_average = False) 
             old_tensor = torch.nn.functional.log_softmax(old_tensor)
             new_tensor = torch.nn.functional.softmax(new_tensor)
             loss = new_criterion(new_tensor, old_tensor)
@@ -583,7 +585,7 @@ def train(train_loader, model, original_model, criterion, optimizer, epoch,
             errs = OrderedDict()
             if not args.earlyexit_lossweights:
                 errs['Top1'] = classerr.value(1)
-                #csvlogger.writerow([epoch, steps_completed, classerr.value(1), loss])
+                csvlogger.writerow([epoch, steps_completed, classerr.value(1), loss])
                 errs['Top5'] = classerr.value(5)
             else:
                 # for Early Exit case, the Top1 and Top5 stats are computed for each exit.

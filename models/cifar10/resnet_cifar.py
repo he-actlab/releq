@@ -37,6 +37,7 @@ This ResNet also has layer gates, to be able to dynamically remove layers.
 import torch.nn as nn
 import math
 import torch.utils.model_zoo as model_zoo
+import itertools
 
 
 __all__ = ['resnet20_cifar', 'resnet32_cifar', 'resnet44_cifar', 'resnet56_cifar']
@@ -138,14 +139,67 @@ class ResNetCifar(nn.Module):
         x = self.relu(x)
 
         x = self.layer1(x)
+        #for i in range(len(self.layer1)):
+        #    x = self.layer1[i](x)
+        #    if i == 2:
+        #        self.act_conv2 = x
         x = self.layer2(x)
+        #self.act_conv2 = x
         x = self.layer3(x)
+        self.act_conv2 = x
 
         x = self.avgpool(x)
         x = x.view(x.size(0), -1)
         x = self.fc(x)
 
         return x
+    
+    def freeze(self):
+        child_counter = 0
+        for child in [self.conv1, self.bn1, self.relu]:
+            #print("Freeze------------------------ ", child_counter)
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+        #print("------------------------Done1------------------------------")
+        for child in itertools.chain(self.layer1, self.layer2, self.layer3):
+            #print("Freeze------------------------ ", child_counter)
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+        #print("------------------------Done2------------------------------")
+        for child in [self.avgpool, self.fc]:
+            #print("Freeze------------------------ ", child_counter)
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+    
+    def freeze_partial(self, layer_list):
+        child_counter = 0
+        for child in [self.conv1, self.bn1, self.relu]:
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
+        for child in itertools.chain(self.layer1, self.layer2, self.layer3):
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
+        for child in [self.avgpool, self.fc]:
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
 
 
 def resnet20_cifar(**kwargs):

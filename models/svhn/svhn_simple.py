@@ -1,5 +1,6 @@
 import torch.nn as nn
 import math
+import itertools
 import torch.utils.model_zoo as model_zoo
 from collections import OrderedDict
 
@@ -18,12 +19,31 @@ class SVHN(nn.Module):
         self.classifier = nn.Sequential(nn.Linear(256, num_classes))
         #
     def forward(self, x):
+        self.act_conv2 = self.features[0:7](x)
         x = self.features(x)
         # size(0) is batch size
         # size(1) is image size
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
+    
+    def freeze(self):
+        child_counter = 0
+        for child in itertools.chain(self.features, self.classifier):
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+    
+    def freeze_partial(self, layer_list):
+        child_counter = 0
+        for child in itertools.chain(self.features, self.classifier):
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
 
 def make_layers(cfg, batch_norm=False):
     layers = []

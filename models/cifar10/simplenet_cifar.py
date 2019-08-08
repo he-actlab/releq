@@ -30,14 +30,36 @@ class Simplenet(nn.Module):
         self.fc3 = nn.Linear(84, 10)
 
     def forward(self, x):
+        #self.act_conv2 = self.pool(F.relu(self.conv1(x)))
+        #self.act_conv2 = F.relu(self.conv2(self.act_conv2))
         x = self.pool(F.relu(self.conv1(x)))
         x = self.pool(F.relu(self.conv2(x)))
         x = x.view(-1, 16 * 5 * 5)
         x = F.relu(self.fc1(x))
+        self.act_conv2 = x
         x = F.relu(self.fc2(x))
         #x = nn.Threshold(0.2, 0.0)#ActivationZeroThreshold(x)
         x = self.fc3(x)
+        self.act_conv2 = x
         return x
+    
+    def freeze(self):
+        child_counter = 0
+        for child in self.children():
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+    
+    def freeze_partial(self, layer_list):
+        child_counter = 0
+        for child in self.children():
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
 
 def simplenet_cifar():
     model = Simplenet()

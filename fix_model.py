@@ -26,6 +26,7 @@ def main(argv):
    KEYS_1 = model['state_dict'].keys()
    KEYS_list = [each for each in KEYS_1]
    print('initial number of keys = ', len(KEYS_list))
+   print(KEYS_list)
    for each in KEYS_list:
        if 'float_float' in each:
           print(each)

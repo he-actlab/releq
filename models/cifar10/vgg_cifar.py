@@ -24,6 +24,7 @@ We replaced the three linear classifiers with a single one.
 """
 
 import torch.nn as nn
+import itertools
 
 __all__ = [
     'VGGCifar', 'vgg11_cifar', 'vgg11_bn_cifar', 'vgg13_cifar', 'vgg13_bn_cifar', 'vgg16_cifar', 'vgg16_bn_cifar',
@@ -40,7 +41,11 @@ class VGGCifar(nn.Module):
             self._initialize_weights()
 
     def forward(self, x):
-        x = self.features(x)
+        #x = self.features(x)
+        for i in range(len(self.features.module)):
+            x = self.features.module[i](x)
+            if i == 7:
+                self.act_conv2 = x
         x = x.view(x.size(0), -1)
         x = self.classifier(x)
         return x
@@ -57,6 +62,29 @@ class VGGCifar(nn.Module):
             elif isinstance(m, nn.Linear):
                 nn.init.normal_(m.weight, 0, 0.01)
                 nn.init.constant_(m.bias, 0)
+    
+    def freeze(self):
+        child_counter = 0
+        for child in itertools.chain(self.features.module): #self.classifier
+            for param in child.parameters():
+                param.requires_grad = False
+            child_counter += 1
+        for param in self.classifier.parameters():
+            param.requires_grad = False
+    
+    def freeze_partial(self, layer_list):
+        child_counter = 0
+        for child in itertools.chain(self.features.module):#, self.classifier):
+            if child_counter not in layer_list:
+                for param in child.parameters():
+                    param.requires_grad = False
+            else:
+                for param in child.parameters():
+                    param.requires_grad = True
+            child_counter += 1
+        if child_counter not in layer_list:
+                for param in self.classifier.parameters():
+                    param.requires_grad = False
 
 
 def make_layers(cfg, batch_norm=False):
